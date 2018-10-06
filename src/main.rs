@@ -1,8 +1,13 @@
+extern crate clap;
 extern crate numeric_algs as na;
 
+mod line;
+mod params;
 mod ray;
 
+use line::Line;
 use na::integration::{Integrator, RK4Integrator, StepSize};
+use params::*;
 use ray::{RayState, RayStateDerivative};
 
 static R: f64 = 6_378_000.0;
@@ -38,39 +43,7 @@ fn calc_derivative(state: &RayState) -> RayStateDerivative {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-struct Line {
-    rmin: f64,
-    phimin: f64,
-}
-
-impl Line {
-    fn from_r_dr(r: f64, phi: f64, dr: f64) -> Line {
-        let dphi = (dr / r).atan();
-        Line {
-            rmin: r * dphi.cos(),
-            phimin: phi - dphi,
-        }
-    }
-
-    fn from_two_points(r1: f64, phi1: f64, r2: f64, phi2: f64) -> Line {
-        let a = r1 / r2;
-        let tanphi = (a * phi1.cos() - phi2.cos()) / (phi2.sin() - a * phi1.sin());
-        let phimin = tanphi.atan();
-        Line {
-            rmin: r1 * (phi1 - phimin).cos(),
-            phimin,
-        }
-    }
-
-    fn r(&self, phi: f64) -> f64 {
-        self.rmin / (phi - self.phimin).cos()
-    }
-}
-
-fn find_height_at(dh0: f64, dist: f64) -> f64 {
-    let h0 = 1565.0;
-
+fn find_height_at(h0: f64, dh0: f64, dist: f64) -> f64 {
     let mut state = RayState {
         phi: 0.0,
         h: h0,
@@ -85,27 +58,65 @@ fn find_height_at(dh0: f64, dist: f64) -> f64 {
     state.h
 }
 
-fn main() {
-    let h0 = 1565.0;
-    let (mut min_dh0, mut max_dh0) = (-280000.0, 0.0);
+fn find_dr_from_target(h0: f64, tgt_h: f64, tgt_dist: f64) -> f64 {
+    let (mut min_dh0, mut max_dh0) = (-1e9, 0.0);
 
     while max_dh0 - min_dh0 > 0.001 {
         let cur_dh0 = 0.5 * (min_dh0 + max_dh0);
-        let h = find_height_at(cur_dh0, 73e3);
-        if h > 680.0 {
+        let h = find_height_at(h0, cur_dh0, tgt_dist * 1e3);
+        if h > tgt_h {
             max_dh0 = cur_dh0;
         } else {
             min_dh0 = cur_dh0;
         }
     }
 
-    let dh0 = 0.5 * (min_dh0 + max_dh0);
+    0.5 * (min_dh0 + max_dh0)
+}
 
-    println!("Found dh0: {}", dh0);
+fn main() {
+    let params = parse_arguments();
 
-    let h_at_73 = find_height_at(dh0, 73e3);
-    let h_at_schneeberg = find_height_at(dh0, 277e3);
+    println!("Ray parameters chosen:");
+    println!("Starting altitude: {} m ASL", params.ray.start_h);
 
-    println!("Altitude 73km from Praded: {}", h_at_73);
-    println!("Altitude 277km from Praded: {}", h_at_schneeberg);
+    let dh0 = match params.ray.dir {
+        RayDir::Angle(ang) => {
+            println!("Starting angle: {} degrees from horizontal", ang);
+            (params.ray.start_h + R) * (ang * 3.1415926535 / 180.0).tan()
+        }
+        RayDir::Target { h, dist } => {
+            println!("Hits {} m ASL at a distance of {} km", h, dist);
+            if params.straight {
+                let line =
+                    Line::from_two_points(params.ray.start_h + R, 0.0, h + R, dist * 1e3 / R);
+                line.r(0.0) * (-line.phimin).tan()
+            } else {
+                find_dr_from_target(params.ray.start_h, h, dist)
+            }
+        }
+    };
+    if params.straight {
+        println!("Straight-line calculation chosen.");
+    }
+    println!();
+
+    match params.output {
+        Output::HAtDist(dist) => {
+            if params.straight {
+                let line = Line::from_r_dr(params.ray.start_h + R, 0.0, dh0);
+                println!(
+                    "Straight-line altitude at distance {} km: {}",
+                    dist,
+                    line.r(dist * 1e3 / R) - R
+                );
+            } else {
+                println!(
+                    "Altitude at distance {} km: {}",
+                    dist,
+                    find_height_at(params.ray.start_h, dh0, dist * 1e3)
+                );
+            }
+        }
+    }
 }

@@ -5,3 +5,4 @@ authors = ["Bartłomiej Kamiński <fizyk20@gmail.com>"]
 
 [dependencies]
 numeric-algs = { path = "../numeric-algs" }
+clap = "2.*"
