@@ -151,9 +151,8 @@ impl Line {
     }
 }
 
-fn main() {
-    let h0 = 1.0;
-    let dh0 = 0.0;
+fn find_height_at(dh0: f64, dist: f64) -> f64 {
+    let h0 = 1565.0;
 
     let mut state = RayState {
         phi: 0.0,
@@ -162,17 +161,34 @@ fn main() {
     };
 
     let mut integrator = RK4Integrator::new(1e-5);
-    println!("Calculating...");
-    while state.h < 200e3 {
+    while state.phi < dist / R {
         integrator.propagate_in_place(&mut state, calc_derivative, StepSize::UseDefault);
     }
 
-    println!("Final state: {:?}", state);
+    state.h
+}
 
-    let line1 = Line::from_r_dr(h0 + R, 0.0, 0.0);
-    println!("Line 1: {:?}", line1);
-    let line2 = Line::from_two_points(h0 + R, 0.0, state.h + R, state.phi);
-    println!("Line 2: {:?}", line2);
+fn main() {
+    let h0 = 1565.0;
+    let (mut min_dh0, mut max_dh0) = (-280000.0, 0.0);
 
-    println!("Refraction: {}", line2.phimin - line1.phimin);
+    while max_dh0 - min_dh0 > 0.001 {
+        let cur_dh0 = 0.5 * (min_dh0 + max_dh0);
+        let h = find_height_at(cur_dh0, 73e3);
+        if h > 680.0 {
+            max_dh0 = cur_dh0;
+        } else {
+            min_dh0 = cur_dh0;
+        }
+    }
+
+    let dh0 = 0.5 * (min_dh0 + max_dh0);
+
+    println!("Found dh0: {}", dh0);
+
+    let h_at_73 = find_height_at(dh0, 73e3);
+    let h_at_schneeberg = find_height_at(dh0, 277e3);
+
+    println!("Altitude 73km from Praded: {}", h_at_73);
+    println!("Altitude 277km from Praded: {}", h_at_schneeberg);
 }
