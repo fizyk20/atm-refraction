@@ -1,94 +1,11 @@
 extern crate numeric_algs as na;
-use std::ops::{Add, Div, Mul, Neg, Sub};
+
+mod ray;
 
 use na::integration::{Integrator, RK4Integrator, StepSize};
-use na::{State, StateDerivative};
+use ray::{RayState, RayStateDerivative};
 
 static R: f64 = 6_378_000.0;
-
-#[derive(Clone, Copy, Debug)]
-struct RayState {
-    phi: f64,
-    h: f64,
-    dr: f64,
-}
-
-#[derive(Clone, Copy, Debug)]
-struct RayStateDerivative {
-    dphi: f64,
-    dr: f64,
-    d2r: f64,
-}
-
-impl Add<RayStateDerivative> for RayStateDerivative {
-    type Output = RayStateDerivative;
-    fn add(self, other: RayStateDerivative) -> RayStateDerivative {
-        RayStateDerivative {
-            dphi: self.dphi + other.dphi,
-            dr: self.dr + other.dr,
-            d2r: self.d2r + other.d2r,
-        }
-    }
-}
-
-impl Sub<RayStateDerivative> for RayStateDerivative {
-    type Output = RayStateDerivative;
-    fn sub(self, other: RayStateDerivative) -> RayStateDerivative {
-        RayStateDerivative {
-            dphi: self.dphi - other.dphi,
-            dr: self.dr - other.dr,
-            d2r: self.d2r - other.d2r,
-        }
-    }
-}
-
-impl Mul<f64> for RayStateDerivative {
-    type Output = RayStateDerivative;
-    fn mul(self, other: f64) -> RayStateDerivative {
-        RayStateDerivative {
-            dphi: self.dphi * other,
-            dr: self.dr * other,
-            d2r: self.d2r * other,
-        }
-    }
-}
-
-impl Div<f64> for RayStateDerivative {
-    type Output = RayStateDerivative;
-    fn div(self, other: f64) -> RayStateDerivative {
-        RayStateDerivative {
-            dphi: self.dphi / other,
-            dr: self.dr / other,
-            d2r: self.d2r / other,
-        }
-    }
-}
-
-impl Neg for RayStateDerivative {
-    type Output = RayStateDerivative;
-    fn neg(self) -> RayStateDerivative {
-        RayStateDerivative {
-            dphi: -self.dphi,
-            dr: -self.dr,
-            d2r: -self.d2r,
-        }
-    }
-}
-
-impl StateDerivative for RayStateDerivative {
-    fn abs(&self) -> f64 {
-        (self.dphi * self.dphi + self.dr * self.dr + self.d2r * self.d2r).sqrt()
-    }
-}
-
-impl State for RayState {
-    type Derivative = RayStateDerivative;
-    fn shift_in_place(&mut self, dir: &RayStateDerivative, amount: f64) {
-        self.phi += dir.dphi * amount;
-        self.h += dir.dr * amount;
-        self.dr += dir.d2r * amount;
-    }
-}
 
 #[inline]
 fn n(h: f64) -> f64 {
