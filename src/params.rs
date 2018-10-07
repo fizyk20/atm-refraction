@@ -20,12 +20,14 @@ pub struct Ray {
 pub enum Output {
     /// altitude at a given distance
     HAtDist(f64),
+    /// output starting angle of the ray
+    Angle,
 }
 
 pub struct Params {
     pub ray: Ray,
     pub straight: bool,
-    pub output: Output,
+    pub output: Vec<Output>,
 }
 
 pub fn parse_arguments() -> Params {
@@ -67,6 +69,11 @@ pub fn parse_arguments() -> Params {
                 .help("Distance at which to output altitude (kilometers)")
                 .takes_value(true),
         ).arg(
+            Arg::with_name("output_ang")
+                .long("output-ang")
+                .help("Output the starting angle of the ray")
+                .takes_value(false),
+        ).arg(
             Arg::with_name("straight")
                 .short("s")
                 .long("straight")
@@ -103,14 +110,16 @@ pub fn parse_arguments() -> Params {
         start_h,
         dir: ray_dir,
     };
-    let output = Output::HAtDist(
-        matches
-            .value_of("output_dist")
-            .expect("No output chosen!")
-            .parse()
-            .ok()
-            .expect("Invalid distance passed to --output-dist"),
-    );
+    let mut output = Vec::new();
+    if let Some(dist) = matches
+        .value_of("output_dist")
+        .and_then(|val| val.parse().ok())
+    {
+        output.push(Output::HAtDist(dist));
+    }
+    if matches.is_present("output_ang") {
+        output.push(Output::Angle);
+    }
     Params {
         ray,
         straight: matches.is_present("straight"),

@@ -101,21 +101,27 @@ fn main() {
     }
     println!();
 
-    match params.output {
-        Output::HAtDist(dist) => {
-            if params.straight {
-                let line = Line::from_r_dr(params.ray.start_h + R, 0.0, dh0);
-                println!(
-                    "Straight-line altitude at distance {} km: {}",
-                    dist,
-                    line.r(dist * 1e3 / R) - R
-                );
-            } else {
-                println!(
-                    "Altitude at distance {} km: {}",
-                    dist,
-                    find_height_at(params.ray.start_h, dh0, dist * 1e3)
-                );
+    for output in &params.output {
+        match *output {
+            Output::HAtDist(dist) => {
+                if params.straight {
+                    let line = Line::from_r_dr(params.ray.start_h + R, 0.0, dh0);
+                    println!(
+                        "Straight-line altitude at distance {} km: {}",
+                        dist,
+                        line.r(dist * 1e3 / R) - R
+                    );
+                } else {
+                    println!(
+                        "Altitude at distance {} km: {}",
+                        dist,
+                        find_height_at(params.ray.start_h, dh0, dist * 1e3)
+                    );
+                }
+            }
+            Output::Angle => {
+                let ang = (dh0 / (params.ray.start_h + R)).atan();
+                println!("Starting angle: {} degrees", ang * 180.0 / 3.1415926535);
             }
         }
     }
