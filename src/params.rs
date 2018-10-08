@@ -9,7 +9,7 @@ pub enum RayDir {
 }
 
 /// Definition of a ray
-pub struct Ray {
+pub struct RayData {
     /// starting altitude
     pub start_h: f64,
     /// direction of propagation
@@ -25,7 +25,7 @@ pub enum Output {
 }
 
 pub struct Params {
-    pub ray: Ray,
+    pub ray: RayData,
     pub straight: bool,
     pub output: Vec<Output>,
 }
@@ -106,7 +106,7 @@ pub fn parse_arguments() -> Params {
         (None, None, None) => panic!("No ray direction chosen!"),
         _ => panic!("Conflicting options detected (--start-angle, --tgt-h, --tgt-dist)"),
     };
-    let ray = Ray {
+    let ray = RayData {
         start_h,
         dir: ray_dir,
     };

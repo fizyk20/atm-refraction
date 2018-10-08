@@ -3,75 +3,32 @@ extern crate numeric_algs as na;
 
 mod line;
 mod params;
+mod path;
 mod ray;
 
 use line::Line;
-use na::integration::{Integrator, RK4Integrator, StepSize};
 use params::*;
-use ray::{RayState, RayStateDerivative};
+use path::Path;
+use ray::Ray;
 
-static R: f64 = 6_378_000.0;
+pub static R: f64 = 6_378_000.0;
+pub static PI: f64 = 3.1415926536;
 
-#[inline]
-fn n(h: f64) -> f64 {
-    let n0 = 0.000293;
-    let alpha = 1.25e-4;
-    1.0 + n0 * (-alpha * h).exp()
-}
+fn find_ray_from_target(h0: f64, tgt_h: f64, tgt_dist: f64) -> Ray {
+    let (mut min_ang, mut max_ang) = (-1.5, 1.5);
 
-#[inline]
-fn dn(h: f64) -> f64 {
-    let alpha = 1.25e-4;
-    let n0 = 0.000293;
-    -alpha * n0 * (-alpha * h).exp()
-}
-
-fn calc_derivative(state: &RayState) -> RayStateDerivative {
-    let dr = state.dr;
-    let h = state.h;
-
-    let nr = n(h);
-    let dnr = dn(h);
-
-    let r = h + R;
-    let d2r = dr * dr * dnr / nr + r * r * dnr / nr + 2.0 * dr * dr / r + r;
-
-    RayStateDerivative {
-        dphi: 1.0,
-        dr: state.dr,
-        d2r,
-    }
-}
-
-fn find_height_at(h0: f64, dh0: f64, dist: f64) -> f64 {
-    let mut state = RayState {
-        phi: 0.0,
-        h: h0,
-        dr: dh0,
-    };
-
-    let mut integrator = RK4Integrator::new(1e-5);
-    while state.phi < dist / R {
-        integrator.propagate_in_place(&mut state, calc_derivative, StepSize::UseDefault);
-    }
-
-    state.h
-}
-
-fn find_dr_from_target(h0: f64, tgt_h: f64, tgt_dist: f64) -> f64 {
-    let (mut min_dh0, mut max_dh0) = (-1e9, 1e7);
-
-    while max_dh0 - min_dh0 > 0.001 {
-        let cur_dh0 = 0.5 * (min_dh0 + max_dh0);
-        let h = find_height_at(h0, cur_dh0, tgt_dist * 1e3);
+    while max_ang - min_ang > 0.000001 {
+        let cur_ang = 0.5 * (min_ang + max_ang);
+        let ray = Ray::from_h_ang(h0, cur_ang);
+        let h = ray.h_at(tgt_dist);
         if h > tgt_h {
-            max_dh0 = cur_dh0;
+            max_ang = cur_ang;
         } else {
-            min_dh0 = cur_dh0;
+            min_ang = cur_ang;
         }
     }
 
-    0.5 * (min_dh0 + max_dh0)
+    Ray::from_h_ang(h0, 0.5 * (min_ang + max_ang))
 }
 
 fn main() {
@@ -80,19 +37,26 @@ fn main() {
     println!("Ray parameters chosen:");
     println!("Starting altitude: {} m ASL", params.ray.start_h);
 
-    let dh0 = match params.ray.dir {
+    let ray: Box<Path> = match params.ray.dir {
         RayDir::Angle(ang) => {
             println!("Starting angle: {} degrees from horizontal", ang);
-            (params.ray.start_h + R) * (ang * 3.1415926535 / 180.0).tan()
+            if params.straight {
+                Box::new(Line::from_r_ang(params.ray.start_h + R, ang * PI / 180.0))
+            } else {
+                Box::new(Ray::from_h_ang(params.ray.start_h, ang * PI / 180.0))
+            }
         }
         RayDir::Target { h, dist } => {
             println!("Hits {} m ASL at a distance of {} km", h, dist);
             if params.straight {
-                let line =
-                    Line::from_two_points(params.ray.start_h + R, 0.0, h + R, dist * 1e3 / R);
-                line.r(0.0) * (-line.phimin).tan()
+                Box::new(Line::from_two_points(
+                    params.ray.start_h + R,
+                    0.0,
+                    h + R,
+                    dist * 1e3 / R,
+                ))
             } else {
-                find_dr_from_target(params.ray.start_h, h, dist)
+                Box::new(find_ray_from_target(params.ray.start_h, h, dist))
             }
         }
     };
@@ -104,24 +68,10 @@ fn main() {
     for output in &params.output {
         match *output {
             Output::HAtDist(dist) => {
-                if params.straight {
-                    let line = Line::from_r_dr(params.ray.start_h + R, 0.0, dh0);
-                    println!(
-                        "Straight-line altitude at distance {} km: {}",
-                        dist,
-                        line.r(dist * 1e3 / R) - R
-                    );
-                } else {
-                    println!(
-                        "Altitude at distance {} km: {}",
-                        dist,
-                        find_height_at(params.ray.start_h, dh0, dist * 1e3)
-                    );
-                }
+                println!("Altitude at distance {} km: {}", dist, ray.h_at(dist));
             }
             Output::Angle => {
-                let ang = (dh0 / (params.ray.start_h + R)).atan();
-                println!("Starting angle: {} degrees", ang * 180.0 / 3.1415926535);
+                println!("Starting angle: {} degrees", ray.start_angle() * 180.0 / PI);
             }
         }
     }
