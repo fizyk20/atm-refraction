@@ -59,7 +59,7 @@ fn find_height_at(h0: f64, dh0: f64, dist: f64) -> f64 {
 }
 
 fn find_dr_from_target(h0: f64, tgt_h: f64, tgt_dist: f64) -> f64 {
-    let (mut min_dh0, mut max_dh0) = (-1e9, 0.0);
+    let (mut min_dh0, mut max_dh0) = (-1e9, 1e7);
 
     while max_dh0 - min_dh0 > 0.001 {
         let cur_dh0 = 0.5 * (min_dh0 + max_dh0);
