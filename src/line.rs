@@ -8,14 +8,6 @@ pub struct Line {
 }
 
 impl Line {
-    pub fn from_r_dr(r: f64, phi: f64, dr: f64) -> Line {
-        let dphi = (dr / r).atan();
-        Line {
-            rmin: r * dphi.cos(),
-            phimin: phi - dphi,
-        }
-    }
-
     pub fn from_r_ang(r: f64, ang: f64) -> Line {
         Line {
             rmin: r * ang.cos(),

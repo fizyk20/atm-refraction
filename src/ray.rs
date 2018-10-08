@@ -87,7 +87,7 @@ impl Path for Ray {
     }
 
     fn start_angle(&self) -> f64 {
-        (self.start_dh / self.start_h).atan()
+        (self.start_dh / (self.start_h + R)).atan()
     }
 
     fn h_at(&self, dist: f64) -> f64 {
@@ -97,7 +97,7 @@ impl Path for Ray {
 
     fn angle_at(&self, dist: f64) -> f64 {
         let state = self.state_at(dist);
-        (state.dr / state.h).atan()
+        (state.dr / (state.h + R)).atan()
     }
 }
 

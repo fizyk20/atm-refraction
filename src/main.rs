@@ -31,6 +31,22 @@ fn find_ray_from_target(h0: f64, tgt_h: f64, tgt_dist: f64) -> Ray {
     Ray::from_h_ang(h0, 0.5 * (min_ang + max_ang))
 }
 
+fn find_dist_for_h(ray: &Path, tgt_h: f64) -> f64 {
+    let (mut min_dist, mut max_dist) = (0.0, 5000.0);
+
+    while max_dist - min_dist > 0.00001 {
+        let cur_dist = 0.5 * (min_dist + max_dist);
+        let h = ray.h_at(cur_dist);
+        if h > tgt_h {
+            max_dist = cur_dist;
+        } else {
+            min_dist = cur_dist;
+        }
+    }
+
+    0.5 * (min_dist + max_dist)
+}
+
 fn main() {
     let params = parse_arguments();
 
@@ -59,6 +75,14 @@ fn main() {
                 Box::new(find_ray_from_target(params.ray.start_h, h, dist))
             }
         }
+        RayDir::Horizon => {
+            println!("Find angle to horizon");
+            if params.straight {
+                Box::new(Line::from_r_ang(R, 0.0))
+            } else {
+                Box::new(Ray::from_h_dh(0.0, 0.0))
+            }
+        }
     };
     if params.straight {
         println!("Straight-line calculation chosen.");
@@ -72,6 +96,11 @@ fn main() {
             }
             Output::Angle => {
                 println!("Starting angle: {} degrees", ray.start_angle() * 180.0 / PI);
+            }
+            Output::Horizon => {
+                let dist_to_target_h = find_dist_for_h(&*ray, params.ray.start_h);
+                let ang = ray.angle_at(dist_to_target_h);
+                println!("Angle to the horizon: {} degrees", -ang * 180.0 / PI);
             }
         }
     }
