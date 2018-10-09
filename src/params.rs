@@ -28,9 +28,16 @@ pub enum Output {
     Horizon,
 }
 
+/// the shape of the simulated Earth
+#[derive(Clone, Copy)]
+pub enum EarthShape {
+    Spherical { radius: f64 },
+    Flat,
+}
+
 pub struct Params {
     pub ray: RayData,
-    pub radius: f64,
+    pub shape: EarthShape,
     pub straight: bool,
     pub output: Vec<Output>,
     pub verbose: bool,
@@ -72,8 +79,14 @@ pub fn parse_arguments() -> Params {
                 .short("R")
                 .long("radius")
                 .value_name("RADIUS")
-                .help("Calculate assuming the given value as the Earth's radius, in km (default: 6378)")
+                .help("Calculate assuming the given value as the Earth's radius, in km (default: 6378) (conflicts with --flat)")
                 .takes_value(true),
+        ).arg(
+            Arg::with_name("flat")
+                .short("f")
+                .long("flat")
+                .help("Simulate a flat Earth (conflicts with --radius)")
+                .takes_value(false),
         ).arg(
             Arg::with_name("output_dist")
                 .short("o")
@@ -110,12 +123,6 @@ pub fn parse_arguments() -> Params {
         .parse()
         .ok()
         .expect("Invalid altitude passed to start-h");
-    let radius: f64 = matches
-        .value_of("radius")
-        .unwrap_or("6378.0")
-        .parse()
-        .ok()
-        .expect("Invalid radius passed");
     let start_angle = matches.value_of("start_angle");
     let tgt_h = matches.value_of("target_h");
     let tgt_dist = matches.value_of("target_dist");
@@ -144,6 +151,17 @@ pub fn parse_arguments() -> Params {
         start_h,
         dir: ray_dir,
     };
+
+    let shape = match (matches.is_present("flat"), matches.value_of("radius")) {
+        (false, None) => EarthShape::Spherical { radius: 6378000.0 },
+        (true, None) => EarthShape::Flat,
+        (false, Some(radius)) => {
+            let r: f64 = radius.parse().ok().expect("Invalid radius passed");
+            EarthShape::Spherical { radius: r * 1e3 }
+        }
+        (true, Some(_)) => panic!("Conflicting Earth shape options chosen!"),
+    };
+
     let mut output = Vec::new();
     if let Some(dist) = matches
         .value_of("output_dist")
@@ -160,7 +178,7 @@ pub fn parse_arguments() -> Params {
     Params {
         ray,
         straight: matches.is_present("straight"),
-        radius: radius * 1e3,
+        shape,
         output,
         verbose: matches.is_present("verbose"),
     }
