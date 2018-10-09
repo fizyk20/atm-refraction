@@ -49,12 +49,17 @@ fn find_dist_for_h(radius: f64, ray: &Path, tgt_h: f64) -> f64 {
 fn main() {
     let params = parse_arguments();
 
-    println!("Ray parameters chosen:");
-    println!("Starting altitude: {} m ASL", params.ray.start_h);
+    if params.verbose {
+        println!("Ray parameters chosen:");
+        println!("Earth radius: {} km", params.radius / 1e3);
+        println!("Starting altitude: {} m ASL", params.ray.start_h);
+    }
 
     let ray: Box<Path> = match params.ray.dir {
         RayDir::Angle(ang) => {
-            println!("Starting angle: {} degrees from horizontal", ang);
+            if params.verbose {
+                println!("Starting angle: {} degrees from horizontal", ang);
+            }
             if params.straight {
                 Box::new(Line::from_r_ang(
                     params.ray.start_h + params.radius,
@@ -69,7 +74,9 @@ fn main() {
             }
         }
         RayDir::Target { h, dist } => {
-            println!("Hits {} m ASL at a distance of {} km", h, dist);
+            if params.verbose {
+                println!("Hits {} m ASL at a distance of {} km", h, dist);
+            }
             if params.straight {
                 Box::new(Line::from_two_points(
                     params.ray.start_h + params.radius,
@@ -87,7 +94,9 @@ fn main() {
             }
         }
         RayDir::Horizon => {
-            println!("Find angle to horizon");
+            if params.verbose {
+                println!("Find angle to horizon");
+            }
             if params.straight {
                 Box::new(Line::from_r_ang(params.radius, 0.0))
             } else {
@@ -95,27 +104,44 @@ fn main() {
             }
         }
     };
-    if params.straight {
+    if params.straight && params.verbose {
         println!("Straight-line calculation chosen.");
     }
-    println!();
+    if params.verbose {
+        println!();
+    }
 
     for output in &params.output {
         match *output {
             Output::HAtDist(dist) => {
-                println!(
-                    "Altitude at distance {} km: {}",
-                    dist,
-                    ray.r_at_phi(dist * 1e3 / params.radius) - params.radius
-                );
+                if params.verbose {
+                    println!(
+                        "Altitude at distance {} km: {}",
+                        dist,
+                        ray.r_at_phi(dist * 1e3 / params.radius) - params.radius
+                    );
+                } else {
+                    println!(
+                        "{}",
+                        ray.r_at_phi(dist * 1e3 / params.radius) - params.radius
+                    );
+                }
             }
             Output::Angle => {
-                println!("Starting angle: {} degrees", ray.start_angle() * 180.0 / PI);
+                if params.verbose {
+                    println!("Starting angle: {} degrees", ray.start_angle() * 180.0 / PI);
+                } else {
+                    println!("{}", ray.start_angle() * 180.0 / PI);
+                }
             }
             Output::Horizon => {
                 let dist_to_target_h = find_dist_for_h(params.radius, &*ray, params.ray.start_h);
                 let ang = ray.angle_at_phi(dist_to_target_h * 1e3 / params.radius);
-                println!("Angle to the horizon: {} degrees", -ang * 180.0 / PI);
+                if params.verbose {
+                    println!("Angle to the horizon: {} degrees", -ang * 180.0 / PI);
+                } else {
+                    println!("{}", -ang * 180.0 / PI);
+                }
             }
         }
     }

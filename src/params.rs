@@ -33,6 +33,7 @@ pub struct Params {
     pub radius: f64,
     pub straight: bool,
     pub output: Vec<Output>,
+    pub verbose: bool,
 }
 
 pub fn parse_arguments() -> Params {
@@ -96,6 +97,12 @@ pub fn parse_arguments() -> Params {
                 .long("straight")
                 .help("Calculation for a straight-line ray")
                 .takes_value(false),
+        ).arg(
+            Arg::with_name("verbose")
+                .short("v")
+                .long("verbose")
+                .help("Be verbose")
+                .takes_value(false),
         ).get_matches();
     let start_h: f64 = matches
         .value_of("start_h")
@@ -155,5 +162,6 @@ pub fn parse_arguments() -> Params {
         straight: matches.is_present("straight"),
         radius: radius * 1e3,
         output,
+        verbose: matches.is_present("verbose"),
     }
 }
