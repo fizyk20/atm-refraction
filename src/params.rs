@@ -30,6 +30,7 @@ pub enum Output {
 
 pub struct Params {
     pub ray: RayData,
+    pub radius: f64,
     pub straight: bool,
     pub output: Vec<Output>,
 }
@@ -66,6 +67,13 @@ pub fn parse_arguments() -> Params {
                 .help("Target point distance (kilometers); conflicts with --start-angle")
                 .takes_value(true),
         ).arg(
+            Arg::with_name("radius")
+                .short("R")
+                .long("radius")
+                .value_name("RADIUS")
+                .help("Calculate assuming the given value as the Earth's radius, in km (default: 6378)")
+                .takes_value(true),
+        ).arg(
             Arg::with_name("output_dist")
                 .short("o")
                 .long("output-dist")
@@ -95,6 +103,12 @@ pub fn parse_arguments() -> Params {
         .parse()
         .ok()
         .expect("Invalid altitude passed to start-h");
+    let radius: f64 = matches
+        .value_of("radius")
+        .unwrap_or("6378.0")
+        .parse()
+        .ok()
+        .expect("Invalid radius passed");
     let start_angle = matches.value_of("start_angle");
     let tgt_h = matches.value_of("target_h");
     let tgt_dist = matches.value_of("target_dist");
@@ -139,6 +153,7 @@ pub fn parse_arguments() -> Params {
     Params {
         ray,
         straight: matches.is_present("straight"),
+        radius: radius * 1e3,
         output,
     }
 }

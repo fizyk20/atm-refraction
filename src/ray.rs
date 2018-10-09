@@ -2,9 +2,9 @@ use na::integration::{Integrator, RK4Integrator, StepSize};
 use na::{State, StateDerivative};
 use path::Path;
 use std::ops::{Add, Div, Mul, Neg, Sub};
-use R;
 
 pub struct Ray {
+    radius: f64,
     start_h: f64,
     start_dh: f64,
 }
@@ -30,7 +30,7 @@ fn calc_derivative(state: &RayState) -> RayStateDerivative {
     let nr = n(h);
     let dnr = dn(h);
 
-    let r = h + R;
+    let r = h + state.R;
     let d2r = dr * dr * dnr / nr + r * r * dnr / nr + 2.0 * dr * dr / r + r;
 
     RayStateDerivative {
@@ -41,31 +41,30 @@ fn calc_derivative(state: &RayState) -> RayStateDerivative {
 }
 
 impl Ray {
-    pub fn from_h_ang(h: f64, ang: f64) -> Ray {
-        let dh = (h + R) * ang.tan();
+    pub fn from_h_ang(radius: f64, h: f64, ang: f64) -> Ray {
+        let dh = (h + radius) * ang.tan();
         Ray {
+            radius,
             start_h: h,
             start_dh: dh,
         }
     }
 
-    pub fn from_h_dh(h: f64, dh: f64) -> Ray {
+    pub fn from_h_dh(radius: f64, h: f64, dh: f64) -> Ray {
         Ray {
+            radius,
             start_h: h,
             start_dh: dh,
         }
     }
 
-    fn state_at(&self, dist: f64) -> RayState {
-        let tgt_phi = if dist >= 0.0 {
-            dist * 1e3 / R
-        } else {
-            -dist * 1e3 / R
-        };
+    fn state_at_phi(&self, phi: f64) -> RayState {
+        let tgt_phi = if phi >= 0.0 { phi } else { -phi };
         let mut state = RayState {
+            R: self.radius,
             phi: 0.0,
             h: self.start_h,
-            dr: if dist >= 0.0 {
+            dr: if phi >= 0.0 {
                 self.start_dh
             } else {
                 -self.start_dh
@@ -82,27 +81,29 @@ impl Ray {
 }
 
 impl Path for Ray {
-    fn start_h(&self) -> f64 {
-        self.start_h
+    fn start_r(&self) -> f64 {
+        self.start_h + self.radius
     }
 
     fn start_angle(&self) -> f64 {
-        (self.start_dh / (self.start_h + R)).atan()
+        (self.start_dh / (self.start_h + self.radius)).atan()
     }
 
-    fn h_at(&self, dist: f64) -> f64 {
-        let state = self.state_at(dist);
-        state.h
+    fn r_at_phi(&self, phi: f64) -> f64 {
+        let state = self.state_at_phi(phi);
+        state.h + self.radius
     }
 
-    fn angle_at(&self, dist: f64) -> f64 {
-        let state = self.state_at(dist);
-        (state.dr / (state.h + R)).atan()
+    fn angle_at_phi(&self, phi: f64) -> f64 {
+        let state = self.state_at_phi(phi);
+        (state.dr / (state.h + self.radius)).atan()
     }
 }
 
 #[derive(Clone, Copy, Debug)]
+#[allow(non_snake_case)]
 pub struct RayState {
+    R: f64,
     pub phi: f64,
     pub h: f64,
     pub dr: f64,

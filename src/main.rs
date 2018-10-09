@@ -11,16 +11,15 @@ use params::*;
 use path::Path;
 use ray::Ray;
 
-pub static R: f64 = 6_378_000.0;
 pub static PI: f64 = 3.1415926536;
 
-fn find_ray_from_target(h0: f64, tgt_h: f64, tgt_dist: f64) -> Ray {
+fn find_ray_from_target(radius: f64, h0: f64, tgt_h: f64, tgt_dist: f64) -> Ray {
     let (mut min_ang, mut max_ang) = (-1.5, 1.5);
 
     while max_ang - min_ang > 0.000001 {
         let cur_ang = 0.5 * (min_ang + max_ang);
-        let ray = Ray::from_h_ang(h0, cur_ang);
-        let h = ray.h_at(tgt_dist);
+        let ray = Ray::from_h_ang(radius, h0, cur_ang);
+        let h = ray.r_at_phi(tgt_dist * 1e3 / radius) - radius;
         if h > tgt_h {
             max_ang = cur_ang;
         } else {
@@ -28,15 +27,15 @@ fn find_ray_from_target(h0: f64, tgt_h: f64, tgt_dist: f64) -> Ray {
         }
     }
 
-    Ray::from_h_ang(h0, 0.5 * (min_ang + max_ang))
+    Ray::from_h_ang(radius, h0, 0.5 * (min_ang + max_ang))
 }
 
-fn find_dist_for_h(ray: &Path, tgt_h: f64) -> f64 {
+fn find_dist_for_h(radius: f64, ray: &Path, tgt_h: f64) -> f64 {
     let (mut min_dist, mut max_dist) = (0.0, 5000.0);
 
     while max_dist - min_dist > 0.00001 {
         let cur_dist = 0.5 * (min_dist + max_dist);
-        let h = ray.h_at(cur_dist);
+        let h = ray.r_at_phi(cur_dist * 1e3 / radius) - radius;
         if h > tgt_h {
             max_dist = cur_dist;
         } else {
@@ -57,30 +56,42 @@ fn main() {
         RayDir::Angle(ang) => {
             println!("Starting angle: {} degrees from horizontal", ang);
             if params.straight {
-                Box::new(Line::from_r_ang(params.ray.start_h + R, ang * PI / 180.0))
+                Box::new(Line::from_r_ang(
+                    params.ray.start_h + params.radius,
+                    ang * PI / 180.0,
+                ))
             } else {
-                Box::new(Ray::from_h_ang(params.ray.start_h, ang * PI / 180.0))
+                Box::new(Ray::from_h_ang(
+                    params.radius,
+                    params.ray.start_h,
+                    ang * PI / 180.0,
+                ))
             }
         }
         RayDir::Target { h, dist } => {
             println!("Hits {} m ASL at a distance of {} km", h, dist);
             if params.straight {
                 Box::new(Line::from_two_points(
-                    params.ray.start_h + R,
+                    params.ray.start_h + params.radius,
                     0.0,
-                    h + R,
-                    dist * 1e3 / R,
+                    h + params.radius,
+                    dist * 1e3 / params.radius,
                 ))
             } else {
-                Box::new(find_ray_from_target(params.ray.start_h, h, dist))
+                Box::new(find_ray_from_target(
+                    params.radius,
+                    params.ray.start_h,
+                    h,
+                    dist,
+                ))
             }
         }
         RayDir::Horizon => {
             println!("Find angle to horizon");
             if params.straight {
-                Box::new(Line::from_r_ang(R, 0.0))
+                Box::new(Line::from_r_ang(params.radius, 0.0))
             } else {
-                Box::new(Ray::from_h_dh(0.0, 0.0))
+                Box::new(Ray::from_h_dh(params.radius, 0.0, 0.0))
             }
         }
     };
@@ -92,14 +103,18 @@ fn main() {
     for output in &params.output {
         match *output {
             Output::HAtDist(dist) => {
-                println!("Altitude at distance {} km: {}", dist, ray.h_at(dist));
+                println!(
+                    "Altitude at distance {} km: {}",
+                    dist,
+                    ray.r_at_phi(dist * 1e3 / params.radius) - params.radius
+                );
             }
             Output::Angle => {
                 println!("Starting angle: {} degrees", ray.start_angle() * 180.0 / PI);
             }
             Output::Horizon => {
-                let dist_to_target_h = find_dist_for_h(&*ray, params.ray.start_h);
-                let ang = ray.angle_at(dist_to_target_h);
+                let dist_to_target_h = find_dist_for_h(params.radius, &*ray, params.ray.start_h);
+                let ang = ray.angle_at_phi(dist_to_target_h * 1e3 / params.radius);
                 println!("Angle to the horizon: {} degrees", -ang * 180.0 / PI);
             }
         }

@@ -1,5 +1,4 @@
 use path::Path;
-use R;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Line {
@@ -31,19 +30,19 @@ impl Line {
 }
 
 impl Path for Line {
-    fn start_h(&self) -> f64 {
-        self.r(0.0) - R
+    fn start_r(&self) -> f64 {
+        self.r(0.0)
     }
 
     fn start_angle(&self) -> f64 {
         -self.phimin
     }
 
-    fn h_at(&self, dist: f64) -> f64 {
-        self.r(dist * 1e3 / R) - R
+    fn r_at_phi(&self, phi: f64) -> f64 {
+        self.r(phi)
     }
 
-    fn angle_at(&self, dist: f64) -> f64 {
-        dist * 1e3 / R - self.phimin
+    fn angle_at_phi(&self, phi: f64) -> f64 {
+        phi - self.phimin
     }
 }
