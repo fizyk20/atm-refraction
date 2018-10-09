@@ -34,7 +34,7 @@ impl Ray {
             },
         };
 
-        let mut integrator = RK4Integrator::new(1e-5);
+        let mut integrator = RK4Integrator::new(1e-6);
         while state.x < tgt_phi {
             integrator.propagate_in_place(
                 &mut state,

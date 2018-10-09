@@ -29,7 +29,7 @@ impl Ray {
             },
         };
 
-        let mut integrator = RK4Integrator::new(1e-1);
+        let mut integrator = RK4Integrator::new(1.0);
         while state.x < tgt_x {
             integrator.propagate_in_place(&mut state, calc_derivative_flat, StepSize::UseDefault);
         }
