@@ -16,7 +16,9 @@ impl Line {
         }
     }
 
-    pub fn from_two_points(radius: f64, r1: f64, phi1: f64, r2: f64, phi2: f64) -> Line {
+    pub fn from_two_points(radius: f64, h1: f64, phi1: f64, h2: f64, phi2: f64) -> Line {
+        let r1 = h1 + radius;
+        let r2 = h2 + radius;
         let a = r1 / r2;
         let tanphi = (a * phi1.cos() - phi2.cos()) / (phi2.sin() - a * phi1.sin());
         let phimin = tanphi.atan();
