@@ -100,7 +100,7 @@ pub fn create_path(params: &Params) -> Box<Path> {
             if params.verbose {
                 println!("Find angle to horizon");
             }
-            path_from_h_ang(&params.shape, params.straight, params.ray.start_h, 0.0)
+            path_from_h_ang(&params.shape, params.straight, 0.0, 0.0)
         }
     }
 }
