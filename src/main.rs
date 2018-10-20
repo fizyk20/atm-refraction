@@ -1,6 +1,7 @@
 extern crate clap;
 extern crate numeric_algs as na;
 
+mod air;
 mod flat;
 mod params;
 mod path;

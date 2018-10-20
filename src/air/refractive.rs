@@ -20,9 +20,9 @@ fn s(lambda: f64) -> f64 {
 }
 
 #[inline]
-fn ns(lambda: f64) -> f64 {
+fn ns_minus_1(lambda: f64) -> f64 {
     let s = s(lambda);
-    1.0 + (A + B / (130.0 - s) + C / (38.9 - s)) * 1e-8
+    (A + B / (130.0 - s) + C / (38.9 - s)) * 1e-8
 }
 
 #[inline]
@@ -32,11 +32,16 @@ fn x(p: f64, t: f64) -> f64 {
 }
 
 #[inline]
-fn ntp(p: f64, t: f64, lambda: f64) -> f64 {
-    1.0 + p * (ns(lambda) - 1.0) * x(p, t) / D
+fn ntp_minus_1(p: f64, t: f64, lambda: f64) -> f64 {
+    p * ns_minus_1(lambda) * x(p, t) / D
 }
 
-pub fn air_index(lambda: f64, p: f64, t: f64, rh: f64) -> f64 {
+pub fn air_index_minus_1(lambda: f64, p: f64, t: f64, rh: f64) -> f64 {
     let pv = rh / 100.0 * p_sv(t);
-    ntp(p, t, lambda) - (292.75 / t) * (3.7345 - s(lambda) * 0.0401) * pv * 1e-10
+    ntp_minus_1(p, t, lambda) - (292.75 / t) * (3.7345 - s(lambda) * 0.0401) * pv * 1e-10
+}
+
+#[allow(unused)]
+pub fn air_index(lambda: f64, p: f64, t: f64, rh: f64) -> f64 {
+    air_index_minus_1(lambda, p, t, rh) + 1.0
 }

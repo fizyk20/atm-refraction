@@ -1,18 +1,30 @@
+use air::{air_index_minus_1, pressure, temperature};
 use na::{State, StateDerivative};
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
 #[inline]
-fn n(h: f64) -> f64 {
-    let n0 = 0.000293;
-    let alpha = 1.25e-4;
-    1.0 + n0 * (-alpha * h).exp()
+fn n_minus_1(h: f64) -> f64 {
+    let p0 = 101325.0;
+    let t0 = 273.15;
+
+    let pressure = pressure(p0, t0, h);
+    let temperature = temperature(t0, h);
+    let rh = 0.0;
+
+    air_index_minus_1(530e-9, pressure, temperature, rh)
+}
+
+#[inline]
+pub fn n(h: f64) -> f64 {
+    n_minus_1(h) + 1.0
 }
 
 #[inline]
 fn dn(h: f64) -> f64 {
-    let alpha = 1.25e-4;
-    let n0 = 0.000293;
-    -alpha * n0 * (-alpha * h).exp()
+    let epsilon = 0.01;
+    let n1 = n_minus_1(h - epsilon);
+    let n2 = n_minus_1(h + epsilon);
+    (n2 - n1) / (2.0 * epsilon)
 }
 
 pub fn calc_derivative_spherical(radius: f64, state: &RayState) -> RayStateDerivative {
