@@ -16,7 +16,7 @@ dependencies = [
 
 [[package]]
 name = "atm-refraction"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "clap 2.32.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "nom 4.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
