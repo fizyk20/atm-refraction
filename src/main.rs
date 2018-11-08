@@ -1,5 +1,8 @@
 extern crate clap;
 extern crate numeric_algs as na;
+#[macro_use]
+extern crate nom;
+extern crate regex;
 
 mod air;
 mod flat;
