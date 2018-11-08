@@ -1,3 +1,4 @@
+use air::{get_atmosphere, us76_atmosphere, Atmosphere};
 use clap::{App, Arg};
 
 /// Ray direction description
@@ -35,9 +36,15 @@ pub enum EarthShape {
     Flat,
 }
 
+#[derive(Clone)]
+pub struct Environment {
+    pub shape: EarthShape,
+    pub atmosphere: Atmosphere,
+}
+
 pub struct Params {
     pub ray: RayData,
-    pub shape: EarthShape,
+    pub env: Environment,
     pub straight: bool,
     pub output: Vec<Output>,
     pub verbose: bool,
@@ -87,6 +94,12 @@ pub fn parse_arguments() -> Params {
                 .long("flat")
                 .help("Simulate a flat Earth (conflicts with --radius)")
                 .takes_value(false),
+        ).arg(
+            Arg::with_name("atmosphere")
+                .long("atmosphere")
+                .value_name("CONFIG")
+                .help("Atmosphere configuration file")
+                .takes_value(true),
         ).arg(
             Arg::with_name("output_dist")
                 .short("o")
@@ -162,6 +175,11 @@ pub fn parse_arguments() -> Params {
         (true, Some(_)) => panic!("Conflicting Earth shape options chosen!"),
     };
 
+    let atmosphere = matches
+        .value_of("atmosphere")
+        .map(|file| get_atmosphere(&file))
+        .unwrap_or_else(us76_atmosphere);
+
     let mut output = Vec::new();
     if let Some(dist) = matches
         .value_of("output_dist")
@@ -178,7 +196,7 @@ pub fn parse_arguments() -> Params {
     Params {
         ray,
         straight: matches.is_present("straight"),
-        shape,
+        env: Environment { shape, atmosphere },
         output,
         verbose: matches.is_present("verbose"),
     }

@@ -1,19 +1,22 @@
+use air::Atmosphere;
 use na::integration::{Integrator, RK4Integrator, StepSize};
 use path::Path;
 use ray_state::*;
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct Ray {
     start_h: f64,
     start_dh: f64,
+    atm: Atmosphere,
 }
 
 impl Ray {
-    pub fn from_h_ang(h: f64, ang: f64) -> Ray {
+    pub fn from_h_ang(atm: Atmosphere, h: f64, ang: f64) -> Ray {
         let dh = ang.tan();
         Ray {
             start_h: h,
             start_dh: dh,
+            atm,
         }
     }
 
@@ -31,7 +34,11 @@ impl Ray {
 
         let mut integrator = RK4Integrator::new(1.0);
         while state.x < tgt_x {
-            integrator.propagate_in_place(&mut state, calc_derivative_flat, StepSize::UseDefault);
+            integrator.propagate_in_place(
+                &mut state,
+                |state| calc_derivative_flat(&self.atm, state),
+                StepSize::UseDefault,
+            );
         }
 
         state

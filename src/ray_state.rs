@@ -1,38 +1,38 @@
-use air::{air_index_minus_1, pressure, temperature};
+use air::{air_index_minus_1, Atmosphere};
 use na::{State, StateDerivative};
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
-#[inline]
-fn n_minus_1(h: f64) -> f64 {
-    let p0 = 101325.0;
-    let t0 = 273.15;
-
-    let pressure = pressure(p0, t0, h);
-    let temperature = temperature(t0, h);
+fn n_minus_1(atm: &Atmosphere, h: f64) -> f64 {
+    let pressure = atm.pressure(h);
+    let temperature = atm.temperature(h);
     let rh = 0.0;
 
     air_index_minus_1(530e-9, pressure, temperature, rh)
 }
 
 #[inline]
-pub fn n(h: f64) -> f64 {
-    n_minus_1(h) + 1.0
+pub fn n(atm: &Atmosphere, h: f64) -> f64 {
+    n_minus_1(atm, h) + 1.0
 }
 
 #[inline]
-fn dn(h: f64) -> f64 {
+fn dn(atm: &Atmosphere, h: f64) -> f64 {
     let epsilon = 0.01;
-    let n1 = n_minus_1(h - epsilon);
-    let n2 = n_minus_1(h + epsilon);
+    let n1 = n_minus_1(atm, h - epsilon);
+    let n2 = n_minus_1(atm, h + epsilon);
     (n2 - n1) / (2.0 * epsilon)
 }
 
-pub fn calc_derivative_spherical(radius: f64, state: &RayState) -> RayStateDerivative {
+pub fn calc_derivative_spherical(
+    atm: &Atmosphere,
+    radius: f64,
+    state: &RayState,
+) -> RayStateDerivative {
     let dr = state.dr;
     let h = state.h;
 
-    let nr = n(h);
-    let dnr = dn(h);
+    let nr = n(atm, h);
+    let dnr = dn(atm, h);
 
     let r = h + radius;
     let d2r = dr * dr * dnr / nr + r * r * dnr / nr + 2.0 * dr * dr / r + r;
@@ -40,12 +40,12 @@ pub fn calc_derivative_spherical(radius: f64, state: &RayState) -> RayStateDeriv
     RayStateDerivative { dx: 1.0, dr, d2r }
 }
 
-pub fn calc_derivative_flat(state: &RayState) -> RayStateDerivative {
+pub fn calc_derivative_flat(atm: &Atmosphere, state: &RayState) -> RayStateDerivative {
     let dr = state.dr;
     let h = state.h;
 
-    let nr = n(h);
-    let dnr = dn(h);
+    let nr = n(atm, h);
+    let dnr = dn(atm, h);
 
     let d2r = dnr / nr * (1.0 + dr * dr);
 

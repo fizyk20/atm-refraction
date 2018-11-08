@@ -1,20 +1,23 @@
+use air::Atmosphere;
 use na::integration::{Integrator, RK4Integrator, StepSize};
 use path::Path;
 use ray_state::*;
 
 pub struct Ray {
+    atm: Atmosphere,
     radius: f64,
     start_h: f64,
     start_dh: f64,
 }
 
 impl Ray {
-    pub fn from_h_ang(radius: f64, h: f64, ang: f64) -> Ray {
+    pub fn from_h_ang(atm: Atmosphere, radius: f64, h: f64, ang: f64) -> Ray {
         let dh = (h + radius) * ang.tan();
         Ray {
             radius,
             start_h: h,
             start_dh: dh,
+            atm,
         }
     }
 
@@ -38,7 +41,7 @@ impl Ray {
         while state.x < tgt_phi {
             integrator.propagate_in_place(
                 &mut state,
-                |state| calc_derivative_spherical(self.radius, state),
+                |state| calc_derivative_spherical(&self.atm, self.radius, state),
                 StepSize::UseDefault,
             );
         }

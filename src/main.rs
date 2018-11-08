@@ -37,7 +37,7 @@ fn main() {
 
     if params.verbose {
         println!("Ray parameters chosen:");
-        match params.shape {
+        match params.env.shape {
             EarthShape::Spherical { radius } => {
                 println!("Earth: spherical with radius {} km", radius / 1e3)
             }
