@@ -1,56 +1,5 @@
-use air::{air_index_minus_1, Atmosphere};
 use na::{State, StateDerivative};
 use std::ops::{Add, Div, Mul, Neg, Sub};
-
-fn n_minus_1(atm: &Atmosphere, h: f64) -> f64 {
-    let pressure = atm.pressure(h);
-    let temperature = atm.temperature(h);
-    let rh = 0.0;
-
-    air_index_minus_1(530e-9, pressure, temperature, rh)
-}
-
-#[inline]
-pub fn n(atm: &Atmosphere, h: f64) -> f64 {
-    n_minus_1(atm, h) + 1.0
-}
-
-#[inline]
-fn dn(atm: &Atmosphere, h: f64) -> f64 {
-    let epsilon = 0.01;
-    let n1 = n_minus_1(atm, h - epsilon);
-    let n2 = n_minus_1(atm, h + epsilon);
-    (n2 - n1) / (2.0 * epsilon)
-}
-
-pub fn calc_derivative_spherical(
-    atm: &Atmosphere,
-    radius: f64,
-    state: &RayState,
-) -> RayStateDerivative {
-    let dr = state.dr;
-    let h = state.h;
-
-    let nr = n(atm, h);
-    let dnr = dn(atm, h);
-
-    let r = h + radius;
-    let d2r = dr * dr * dnr / nr + r * r * dnr / nr + 2.0 * dr * dr / r + r;
-
-    RayStateDerivative { dx: 1.0, dr, d2r }
-}
-
-pub fn calc_derivative_flat(atm: &Atmosphere, state: &RayState) -> RayStateDerivative {
-    let dr = state.dr;
-    let h = state.h;
-
-    let nr = n(atm, h);
-    let dnr = dn(atm, h);
-
-    let d2r = dnr / nr * (1.0 + dr * dr);
-
-    RayStateDerivative { dx: 1.0, dr, d2r }
-}
 
 #[derive(Clone, Copy, Debug)]
 pub struct RayState {

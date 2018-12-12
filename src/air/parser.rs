@@ -1,4 +1,4 @@
-use nom::{self, types::CompleteStr};
+use nom::{types::CompleteStr, *};
 
 named!(float <CompleteStr, f64>, map!(
         re_find!(r"^(\+|-)?\d+(\.\d+)?(e(\+|-)?\d+)?"),
