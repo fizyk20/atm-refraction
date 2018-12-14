@@ -8,7 +8,7 @@ dependencies = [
 
 [[package]]
 name = "atm-refraction"
-version = "0.3.0"
+version = "0.1.0"
 dependencies = [
  "nom 4.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "numeric-algs 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
