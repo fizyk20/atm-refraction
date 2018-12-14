@@ -45,31 +45,40 @@ impl Environment {
 
     pub(crate) fn calc_derivative_spherical(&self, state: &RayState) -> RayStateDerivative {
         let radius = self.radius().unwrap();
-        let dr = state.dr;
+        let dh = state.dh * radius;
         let h = state.h;
 
         let nr = self.n(h);
         let dnr = self.dn(h);
 
         let r = h + radius;
-        let d2r = dr * dr * dnr / nr + r * r * dnr / nr + 2.0 * dr * dr / r + r;
+        let d2h = dh * dh * dnr / nr + r * r * dnr / nr + 2.0 * dh * dh / r + r;
 
-        RayStateDerivative { dx: 1.0, dr, d2r }
+        RayStateDerivative {
+            dx: 1.0,
+            dh: state.dh,
+            d2h: d2h / radius / radius,
+        }
     }
 
     pub(crate) fn calc_derivative_flat(&self, state: &RayState) -> RayStateDerivative {
-        let dr = state.dr;
+        let dh = state.dh;
         let h = state.h;
 
         let nr = self.n(h);
         let dnr = self.dn(h);
 
-        let d2r = dnr / nr * (1.0 + dr * dr);
+        let d2h = dnr / nr * (1.0 + dh * dh);
 
-        RayStateDerivative { dx: 1.0, dr, d2r }
+        RayStateDerivative { dx: 1.0, dh, d2h }
     }
 
-    pub fn cast_ray<'a>(&'a self, start_h: f64, start_ang: f64, straight: bool) -> Box<Path + 'a> {
+    pub fn cast_ray<'a>(
+        &'a self,
+        start_h: f64,
+        start_ang: f64,
+        straight: bool,
+    ) -> Box<Path<'a> + 'a> {
         match (straight, self.shape) {
             (true, EarthShape::Flat) => Box::new(flat::Line::from_h_ang(start_h, start_ang)),
             (true, EarthShape::Spherical { .. }) => {
@@ -88,7 +97,7 @@ impl Environment {
         tgt_h: f64,
         tgt_dist: f64,
         straight: bool,
-    ) -> Box<Path + 'a> {
+    ) -> Box<Path<'a> + 'a> {
         if straight {
             match self.shape {
                 EarthShape::Flat => {
