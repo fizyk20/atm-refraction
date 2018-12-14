@@ -36,12 +36,15 @@ fn ntp_minus_1(p: f64, t: f64, lambda: f64) -> f64 {
     p * ns_minus_1(lambda) * x(p, t) / D
 }
 
+/// Returns the air refractive index for the given wavelength (`lambda`), at the given pressure
+/// (`p`), temperature (`t`) and relative humidity (`rh`), decreased by 1
 pub fn air_index_minus_1(lambda: f64, p: f64, t: f64, rh: f64) -> f64 {
     let pv = rh / 100.0 * p_sv(t);
     ntp_minus_1(p, t, lambda) - (292.75 / t) * (3.7345 - s(lambda) * 0.0401) * pv * 1e-10
 }
 
-#[allow(unused)]
+/// Returns the air refractive index for the given wavelength (`lambda`), at the given pressure
+/// (`p`), temperature (`t`) and relative humidity (`rh`)
 pub fn air_index(lambda: f64, p: f64, t: f64, rh: f64) -> f64 {
     air_index_minus_1(lambda, p, t, rh) + 1.0
 }

@@ -4,6 +4,15 @@ version = "0.1.0"
 authors = ["Bartłomiej Kamiński <fizyk20@gmail.com>"]
 edition = "2018"
 
+description = "Tools for calculating light paths in the atmosphere"
+
+license = "MIT"
+
+documentation = "https://docs.rs/atm-refraction/0.1.0/atm_refraction/"
+repository = "https://github.com/fizyk20/atm-refraction.git"
+
+categories = ["science"]
+
 [dependencies]
 numeric-algs = "0.2"
 nom = "4.*"

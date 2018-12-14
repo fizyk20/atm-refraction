@@ -1,6 +1,8 @@
 // calculation of the refractive index of air based on
 // https://emtoolbox.nist.gov/wavelength/Documentation.asp#ComparisonCiddorandEdlenEquations
 
+//! A module providing the tooling for atmospheric models.
+
 mod atmosphere;
 mod parser;
 mod refractive;

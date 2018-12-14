@@ -4,6 +4,8 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 
+/// A structure representing an atmospheric model. It provides the temperature and density as
+/// functions of altitude
 #[derive(Debug, Clone)]
 pub struct Atmosphere {
     layer_altitudes: Vec<f64>,
@@ -118,6 +120,7 @@ impl Atmosphere {
         }
     }
 
+    /// Creates the atmospheric model from a parsed definition.
     pub fn from_def(def: AtmosphereDef) -> Atmosphere {
         let PressureDef {
             start_h: h0_p,
@@ -165,6 +168,7 @@ impl Atmosphere {
         }
     }
 
+    /// Returns the temperature at the given altitude
     pub fn temperature(&self, h: f64) -> f64 {
         match self.layer_altitudes.binary_search_by(|a| cmp_f64(a, &h)) {
             Ok(i) => self.start_temperatures[i],
@@ -176,27 +180,31 @@ impl Atmosphere {
         }
     }
 
+    /// Returns the pressure at the given altitude
     pub fn pressure(&self, h: f64) -> f64 {
         match self.layer_altitudes.binary_search_by(|a| cmp_f64(a, &h)) {
             Ok(i) => self.start_pressures[i],
             Err(0) => {
-                self.start_pressures[0] * shift_p_with_lapse(
-                    self.start_temperatures[0],
-                    self.first_lapse,
-                    h - self.layer_altitudes[0],
-                )
+                self.start_pressures[0]
+                    * shift_p_with_lapse(
+                        self.start_temperatures[0],
+                        self.first_lapse,
+                        h - self.layer_altitudes[0],
+                    )
             }
             Err(i) => {
-                self.start_pressures[i - 1] * shift_p_with_lapse(
-                    self.start_temperatures[i - 1],
-                    self.lapses[i - 1],
-                    h - self.layer_altitudes[i - 1],
-                )
+                self.start_pressures[i - 1]
+                    * shift_p_with_lapse(
+                        self.start_temperatures[i - 1],
+                        self.lapses[i - 1],
+                        h - self.layer_altitudes[i - 1],
+                    )
             }
         }
     }
 }
 
+/// Reads an atmosphere definition from file and returns the resulting model
 pub fn get_atmosphere<P: AsRef<Path>>(path: P) -> Atmosphere {
     let mut file = File::open(path).unwrap();
     let mut contents = String::new();
@@ -275,6 +283,9 @@ const US76: &str = "pressure(0) = 101325\
                     lapse(71e3) = -0.002\
                     lapse(84.852e3) = 0";
 
+/// Returns the US-1976 standard model of the Earth's atmosphere.
+///
+/// The temperatures are expressed in kelvins (K), and the pressure in hectopascals (hPa).
 pub fn us76_atmosphere() -> Atmosphere {
     let atm_def = parse_atmosphere(US76).unwrap().1;
     Atmosphere::from_def(atm_def)
