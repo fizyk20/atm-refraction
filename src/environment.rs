@@ -1,5 +1,5 @@
 use crate::air::{air_index_minus_1, Atmosphere};
-use crate::{flat, spherical, Path, RayState, RayStateDerivative};
+use crate::{flat, spherical, Path, PathStepper, RayState, RayStateDerivative};
 
 /// The shape of the simulated Earth
 #[derive(Clone, Copy)]
@@ -101,6 +101,36 @@ impl Environment {
             (false, EarthShape::Flat) => Box::new(flat::Ray::from_h_ang(self, start_h, start_ang)),
             (false, EarthShape::Spherical { .. }) => {
                 Box::new(spherical::Ray::from_h_ang(self, start_h, start_ang))
+            }
+        }
+    }
+
+    /// Returns an object representing a light path.
+    ///
+    /// The path is defined by 3 parameters:
+    /// * `start_h` - the starting altitude of the path in meters
+    /// * `start_ang` - the initial angle in radians between the path and the horizontal plane;
+    /// -π/2 is down, 0 is horizontal, π/2 is up
+    /// * `straight` - `true` if the path should be a straight line, `false` if it should be a ray
+    /// affected by the atmosphere
+    pub fn cast_ray_stepper<'a>(
+        &'a self,
+        start_h: f64,
+        start_ang: f64,
+        straight: bool,
+    ) -> Box<PathStepper<Item = RayState> + 'a> {
+        match (straight, self.shape) {
+            (true, EarthShape::Flat) => {
+                flat::Line::from_h_ang(start_h, start_ang).into_path_stepper()
+            }
+            (true, EarthShape::Spherical { .. }) => {
+                spherical::Line::from_h_ang(self, start_h, start_ang).into_path_stepper()
+            }
+            (false, EarthShape::Flat) => {
+                flat::Ray::from_h_ang(self, start_h, start_ang).into_path_stepper()
+            }
+            (false, EarthShape::Spherical { .. }) => {
+                spherical::Ray::from_h_ang(self, start_h, start_ang).into_path_stepper()
             }
         }
     }
