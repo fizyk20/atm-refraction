@@ -5,6 +5,10 @@
 //! and temperature gradients).
 extern crate numeric_algs as na;
 
+#[cfg(feature = "serialization")]
+#[macro_use]
+extern crate serde_derive;
+
 /// Module containing tools for defining non-standard atmospheric models.
 pub mod air;
 mod environment;

@@ -3,6 +3,7 @@ use crate::{flat, spherical, Path, PathStepper, RayState, RayStateDerivative};
 
 /// The shape of the simulated Earth
 #[derive(Clone, Copy)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub enum EarthShape {
     Spherical { radius: f64 },
     Flat,
