@@ -204,6 +204,12 @@ impl Atmosphere {
     }
 }
 
+/// Parses an atmosphere definition from a string
+pub fn atm_from_str<'a>(def: &'a str) -> Result<Atmosphere, nom::Err<nom::types::CompleteStr<'a>>> {
+    let atm_def = parse_atmosphere(def)?;
+    Ok(Atmosphere::from_def(atm_def.1))
+}
+
 /// Reads an atmosphere definition from file and returns the resulting model
 pub fn get_atmosphere<P: AsRef<Path>>(path: P) -> Atmosphere {
     let mut file = File::open(path).unwrap();

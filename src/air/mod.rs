@@ -8,6 +8,6 @@ mod parser;
 mod refractive;
 mod vapor;
 
-pub use self::atmosphere::{get_atmosphere, us76_atmosphere, Atmosphere};
+pub use self::atmosphere::{atm_from_str, get_atmosphere, us76_atmosphere, Atmosphere};
 pub use self::refractive::{air_index, air_index_minus_1};
 pub use self::vapor::p_sv;
