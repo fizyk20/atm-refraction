@@ -93,7 +93,7 @@ impl Environment {
         start_h: f64,
         start_ang: f64,
         straight: bool,
-    ) -> Box<Path<'a> + 'a> {
+    ) -> Box<dyn Path<'a> + 'a> {
         match (straight, self.shape) {
             (true, EarthShape::Flat) => Box::new(flat::Line::from_h_ang(start_h, start_ang)),
             (true, EarthShape::Spherical { .. }) => {
@@ -119,7 +119,7 @@ impl Environment {
         start_h: f64,
         start_ang: f64,
         straight: bool,
-    ) -> Box<PathStepper<Item = RayState> + 'a> {
+    ) -> Box<dyn PathStepper<Item = RayState> + 'a> {
         match (straight, self.shape) {
             (true, EarthShape::Flat) => {
                 flat::Line::from_h_ang(start_h, start_ang).into_path_stepper()
@@ -154,7 +154,7 @@ impl Environment {
         tgt_h: f64,
         tgt_dist: f64,
         straight: bool,
-    ) -> Box<Path<'a> + 'a> {
+    ) -> Box<dyn Path<'a> + 'a> {
         if straight {
             match self.shape {
                 EarthShape::Flat => {

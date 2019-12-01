@@ -13,7 +13,7 @@ pub trait Path<'a> {
     fn angle_at_dist(&self, dist: f64) -> f64;
     /// Returns a "stepper" - an iterator that performs one integration step along the path on
     /// every call to `next()`
-    fn into_path_stepper(self) -> Box<PathStepper<Item = RayState> + 'a>;
+    fn into_path_stepper(self) -> Box<dyn PathStepper<Item = RayState> + 'a>;
 }
 
 /// The trait representing a "stepper" - an iterator performing one integration step along the

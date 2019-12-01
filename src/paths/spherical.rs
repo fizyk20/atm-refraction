@@ -51,7 +51,7 @@ impl<'a, 'b: 'a> Path<'a> for Line<'b> {
         dist / self.env.radius().unwrap() - self.phimin
     }
 
-    fn into_path_stepper(self) -> Box<PathStepper<Item = RayState> + 'a> {
+    fn into_path_stepper(self) -> Box<dyn PathStepper<Item = RayState> + 'a> {
         Box::new(LineStepper::new(self.env, self, 1.0))
     }
 }
@@ -152,7 +152,7 @@ impl<'a> Path<'a> for Ray<'a> {
         state.get_angle(&self.env)
     }
 
-    fn into_path_stepper(self) -> Box<PathStepper<Item = RayState> + 'a> {
+    fn into_path_stepper(self) -> Box<dyn PathStepper<Item = RayState> + 'a> {
         let state = RayState {
             x: 0.0,
             h: self.start_h,

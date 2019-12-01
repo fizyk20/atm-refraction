@@ -29,7 +29,7 @@ impl<'a> Path<'a> for Line {
         self.a.atan()
     }
 
-    fn into_path_stepper(self) -> Box<PathStepper<Item = RayState> + 'a> {
+    fn into_path_stepper(self) -> Box<dyn PathStepper<Item = RayState> + 'a> {
         Box::new(LineStepper::new(self, 1.0))
     }
 }
@@ -123,7 +123,7 @@ impl<'a, 'b: 'a> Path<'a> for Ray<'b> {
         state.get_angle(&self.env)
     }
 
-    fn into_path_stepper(self) -> Box<PathStepper<Item = RayState> + 'a> {
+    fn into_path_stepper(self) -> Box<dyn PathStepper<Item = RayState> + 'a> {
         let state = RayState {
             x: 0.0,
             h: self.start_h,
