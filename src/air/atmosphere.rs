@@ -7,6 +7,7 @@ use std::path::Path;
 /// A structure representing an atmospheric model. It provides the temperature and density as
 /// functions of altitude
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub struct Atmosphere {
     layer_altitudes: Vec<f64>,
     first_lapse: f64,

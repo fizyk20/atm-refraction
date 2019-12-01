@@ -11,6 +11,7 @@ pub enum EarthShape {
 
 /// Structure storing the shape of the underlying world and the atmospheric model.
 #[derive(Clone)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub struct Environment {
     pub shape: EarthShape,
     pub atmosphere: Atmosphere,
