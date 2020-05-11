@@ -1,4 +1,4 @@
-use crate::air::{air_index_minus_1, Atmosphere};
+use crate::air::{air_index, d_air_index, Atmosphere};
 use crate::{flat, spherical, Path, PathStepper, RayState, RayStateDerivative};
 
 /// The shape of the simulated Earth
@@ -18,29 +18,24 @@ pub struct Environment {
 }
 
 impl Environment {
-    /// Returns the refractive index of the air at the given altitude minus 1
-    pub fn n_minus_1(&self, h: f64) -> f64 {
+    /// Returns the refractive index of the air at the given altitude.
+    pub fn n(&self, h: f64) -> f64 {
         let pressure = self.atmosphere.pressure(h);
         let temperature = self.atmosphere.temperature(h);
         let rh = 0.0;
-
-        air_index_minus_1(530e-9, pressure, temperature, rh)
-    }
-
-    /// Returns the refractive index of the air at the given altitude.
-    #[inline]
-    pub fn n(&self, h: f64) -> f64 {
-        self.n_minus_1(h) + 1.0
+        air_index(530e-9, pressure, temperature, rh)
     }
 
     /// Returns the derivative of the refractive index of the air with respect to the altitude, at
     /// the given altitude
-    #[inline]
     pub fn dn(&self, h: f64) -> f64 {
-        let epsilon = 0.01;
-        let n1 = self.n_minus_1(h - epsilon);
-        let n2 = self.n_minus_1(h + epsilon);
-        (n2 - n1) / (2.0 * epsilon)
+        let pressure = self.atmosphere.pressure(h);
+        let temperature = self.atmosphere.temperature(h);
+        let rh = 0.0;
+        let dp = self.atmosphere.dpressure(h);
+        let dt = self.atmosphere.dtemperature(h);
+        let drh = 0.0;
+        d_air_index(530e-9, pressure, temperature, rh, dp, dt, drh)
     }
 
     /// Returns Some(radius in meters) if the planet model is spherical, or None if it's flat.

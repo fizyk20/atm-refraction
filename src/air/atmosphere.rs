@@ -181,6 +181,15 @@ impl Atmosphere {
         }
     }
 
+    /// Returns the derivative of temperature with respect to altitude at the given altitude
+    pub fn dtemperature(&self, h: f64) -> f64 {
+        match self.layer_altitudes.binary_search_by(|a| cmp_f64(a, &h)) {
+            Ok(i) => self.lapses[i],
+            Err(0) => self.first_lapse,
+            Err(i) => self.lapses[i - 1],
+        }
+    }
+
     /// Returns the pressure at the given altitude
     pub fn pressure(&self, h: f64) -> f64 {
         match self.layer_altitudes.binary_search_by(|a| cmp_f64(a, &h)) {
@@ -202,6 +211,13 @@ impl Atmosphere {
                     )
             }
         }
+    }
+
+    /// Returns the derivative of pressure at the given altitude
+    pub fn dpressure(&self, h: f64) -> f64 {
+        let p = self.pressure(h);
+        let t = self.temperature(h);
+        -A * p / t
     }
 }
 
