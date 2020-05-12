@@ -4,6 +4,7 @@
 //! A module providing the tooling for atmospheric models.
 
 mod atmosphere;
+mod function;
 mod parser;
 mod refractive;
 mod vapor;
