@@ -11,14 +11,14 @@ pub struct PressureDef {
 }
 
 named!(pressure_def <CompleteStr, PressureDef>, ws!(do_parse!(
-        tag!("pressure") >>
-        char!('(') >>
-        start_h: float >>
-        char!(')') >>
-        tag!("=") >>
-        start_p: float >>
-        (PressureDef { start_h, start_p })
-        )));
+tag!("pressure") >>
+char!('(') >>
+start_h: float >>
+char!(')') >>
+tag!("=") >>
+start_p: float >>
+(PressureDef { start_h, start_p })
+)));
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct LapseDef {
@@ -27,14 +27,14 @@ pub struct LapseDef {
 }
 
 named!(lapse_def <CompleteStr, LapseDef>, ws!(do_parse!(
-            tag!("lapse") >>
-            char!('(') >>
-            start_h: opt!(float) >>
-            char!(')') >>
-            tag!("=") >>
-            lapse: float >>
-            (LapseDef { start_h, lapse })
-    )));
+        tag!("lapse") >>
+        char!('(') >>
+        start_h: opt!(float) >>
+        char!(')') >>
+        tag!("=") >>
+        lapse: float >>
+        (LapseDef { start_h, lapse })
+)));
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TemperatureAt {
@@ -43,14 +43,14 @@ pub struct TemperatureAt {
 }
 
 named!(temperature_at <CompleteStr, TemperatureAt>, ws!(do_parse!(
-        tag!("at") >>
-        char!('(') >>
-        start_h: float >>
-        char!(')') >>
-        tag!("=") >>
-        start_t: float >>
-        (TemperatureAt { start_h, start_t })
-        )));
+tag!("at") >>
+char!('(') >>
+start_h: float >>
+char!(')') >>
+tag!("=") >>
+start_t: float >>
+(TemperatureAt { start_h, start_t })
+)));
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TemperatureDef {
@@ -59,11 +59,11 @@ pub struct TemperatureDef {
 }
 
 named!(temperature_def <CompleteStr, TemperatureDef>, ws!(do_parse!(
-            tag!("temperature:") >>
-            start: temperature_at >>
-            lapses: many1!(lapse_def) >>
-            (TemperatureDef { start, lapses })
-            )));
+tag!("temperature:") >>
+start: temperature_at >>
+lapses: many1!(lapse_def) >>
+(TemperatureDef { start, lapses })
+)));
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct AtmosphereDef {
@@ -72,10 +72,10 @@ pub struct AtmosphereDef {
 }
 
 named!(atmosphere <CompleteStr, AtmosphereDef>, ws!(do_parse!(
-            pressure: pressure_def >>
-            temperature: temperature_def >>
-            (AtmosphereDef { temperature, pressure })
-        )));
+    pressure: pressure_def >>
+    temperature: temperature_def >>
+    (AtmosphereDef { temperature, pressure })
+)));
 
 pub fn parse_atmosphere(txt: &str) -> nom::IResult<CompleteStr, AtmosphereDef> {
     atmosphere(CompleteStr(txt))
