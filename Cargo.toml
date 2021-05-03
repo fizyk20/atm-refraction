@@ -23,4 +23,4 @@ cubic-splines = { path = "../cubic-splines" }
 
 [features]
 default = ["nom/regexp"]
-serialization = ["serde", "serde_derive"]
+serialization = ["serde", "serde_derive", "cubic-splines/serialization"]

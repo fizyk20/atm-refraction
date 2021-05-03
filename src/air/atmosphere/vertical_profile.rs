@@ -1,7 +1,9 @@
 use cubic_splines::{BoundaryCondition, CubicPoly, Spline};
+#[cfg(feature = "serialization")]
+use serde_derive::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq)]
-enum VerticalFunction {
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum VerticalFunction {
     /// T(h) = a*h + b
     Linear {
         a: f64,
@@ -10,13 +12,70 @@ enum VerticalFunction {
     Cubic(CubicPoly<f64>),
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+impl VerticalFunction {
+    pub(crate) fn eval(&self, x: f64) -> f64 {
+        match self {
+            VerticalFunction::Linear { a, b } => a * x + b,
+            VerticalFunction::Cubic(poly) => poly.eval(x),
+        }
+    }
+
+    pub(crate) fn eval_derivative(&self, x: f64) -> f64 {
+        match self {
+            VerticalFunction::Linear { a, .. } => *a,
+            VerticalFunction::Cubic(poly) => poly.derivative(x),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct VerticalProfile {
     altitude_interval_ends: Vec<f64>,
     interval_functions: Vec<VerticalFunction>,
 }
 
+impl Default for VerticalProfile {
+    fn default() -> Self {
+        Self {
+            altitude_interval_ends: vec![],
+            interval_functions: vec![VerticalFunction::Linear { a: 0.0, b: 0.0 }],
+        }
+    }
+}
+
+impl VerticalProfile {
+    pub fn constant(b: f64) -> Self {
+        Self {
+            altitude_interval_ends: vec![],
+            interval_functions: vec![VerticalFunction::Linear { a: 0.0, b }],
+        }
+    }
+
+    pub fn eval(&self, h: f64) -> f64 {
+        match self
+            .altitude_interval_ends
+            .binary_search_by(|a| a.partial_cmp(&h).unwrap())
+        {
+            Ok(index) | Err(index) => self.interval_functions[index].eval(h),
+        }
+    }
+
+    pub fn eval_derivative(&self, h: f64) -> f64 {
+        match self
+            .altitude_interval_ends
+            .binary_search_by(|a| a.partial_cmp(&h).unwrap())
+        {
+            Ok(index) | Err(index) => self.interval_functions[index].eval_derivative(h),
+        }
+    }
+
+    pub(crate) fn internals(&self) -> (&Vec<f64>, &Vec<VerticalFunction>) {
+        (&self.altitude_interval_ends, &self.interval_functions)
+    }
+}
+
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub enum FunctionDef {
     Linear {
         gradient: f64,
