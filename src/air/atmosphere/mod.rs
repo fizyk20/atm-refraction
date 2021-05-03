@@ -150,17 +150,56 @@ impl Atmosphere {
     }
 }
 
-#[test]
-fn test_us76() {
-    let atmosphere = Atmosphere::from_def(AtmosphereDef::us_76());
-    assert_eq!(atmosphere.pressure(0.0), 101325.0);
-    assert_eq!(atmosphere.temperature(0.0), 288.0);
-}
-
 /// Returns the US-1976 standard model of the Earth's atmosphere.
 ///
 /// The temperatures are expressed in kelvins (K), and the pressure in hectopascals (hPa).
 pub fn us76_atmosphere() -> Atmosphere {
     let atm_def = AtmosphereDef::us_76();
     Atmosphere::from_def(atm_def)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use cubic_splines::BoundaryCondition;
+
+    #[test]
+    fn test_us76() {
+        let atmosphere = Atmosphere::from_def(AtmosphereDef::us_76());
+        assert_eq!(atmosphere.pressure(0.0), 101325.0);
+        assert_eq!(atmosphere.temperature(0.0), 288.0);
+    }
+
+    #[test]
+    fn test_spline() {
+        let atmosphere_def = AtmosphereDef {
+            pressure: PressureFixedPoint {
+                altitude: 0.0,
+                pressure: 1000.0,
+            },
+            first_temperature_function: FunctionDef::Spline {
+                boundary_condition: BoundaryCondition::Derivatives(-0.0065, -0.0065),
+                points: vec![
+                    (0.0, 281.6),
+                    (12.5, 283.4),
+                    (19.4, 281.9),
+                    (24.0, 284.7),
+                    (34.0, 290.5),
+                ],
+            },
+            next_functions: vec![],
+            temperature_fixed_point: None,
+        };
+        let atmosphere = Atmosphere::from_def(atmosphere_def);
+        for i in 0..600 {
+            let h = i as f64 * 0.5;
+            println!(
+                "{} {} {}",
+                h,
+                atmosphere.temperature(h),
+                atmosphere.pressure(h)
+            );
+        }
+    }
 }
