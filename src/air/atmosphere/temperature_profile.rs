@@ -1,6 +1,6 @@
 use cubic_splines::{BoundaryCondition, CubicPoly, Spline};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 enum TemperatureFunction {
     /// T(h) = a*h + b
     Linear {
@@ -10,7 +10,7 @@ enum TemperatureFunction {
     Cubic(CubicPoly<f64>),
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct TemperatureProfile {
     altitude_interval_ends: Vec<f64>,
     interval_functions: Vec<TemperatureFunction>,
@@ -359,7 +359,7 @@ impl TemperatureProfileBuilder {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum TemperatureProfileError {
     NoFixedPoint,
     FixedPointConflict {
@@ -369,4 +369,117 @@ pub enum TemperatureProfileError {
         point2: (f64, f64),
         gradient: Option<f64>,
     },
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn should_build_correctly_with_fixed_point_in_first_interval() {
+        let _ = TemperatureProfileBuilder::new(FunctionDef::Linear { gradient: -0.0065 })
+            .with_next_function(11e3, FunctionDef::Linear { gradient: 0.0 })
+            .with_next_function(15e3, FunctionDef::Linear { gradient: 0.0065 })
+            .with_fixed_temp(0.0, 288.0)
+            .build()
+            .expect("should build correctly");
+    }
+
+    #[test]
+    fn should_build_correctly_with_fixed_point_in_last_interval() {
+        let _ = TemperatureProfileBuilder::new(FunctionDef::Linear { gradient: -0.0065 })
+            .with_next_function(11e3, FunctionDef::Linear { gradient: 0.0 })
+            .with_next_function(15e3, FunctionDef::Linear { gradient: 0.0065 })
+            .with_fixed_temp(16e3, 218.0)
+            .build()
+            .expect("should build correctly");
+    }
+
+    #[test]
+    fn should_build_correctly_with_fixed_point_in_the_middle() {
+        let _ = TemperatureProfileBuilder::new(FunctionDef::Linear { gradient: -0.0065 })
+            .with_next_function(11e3, FunctionDef::Linear { gradient: 0.0 })
+            .with_next_function(15e3, FunctionDef::Linear { gradient: 0.0065 })
+            .with_fixed_temp(12e3, 218.0)
+            .build()
+            .expect("should build correctly");
+    }
+
+    #[test]
+    fn should_build_correctly_with_only_spline() {
+        let _ = TemperatureProfileBuilder::new(FunctionDef::Spline {
+            points: vec![(0.0, 0.0), (10.0, -2.0), (15.0, 3.0)],
+            boundary_condition: BoundaryCondition::Natural,
+        })
+        .build()
+        .expect("should build correctly");
+    }
+
+    #[test]
+    fn should_build_correctly_with_spline_with_fixed_point() {
+        let _ = TemperatureProfileBuilder::new(FunctionDef::Spline {
+            points: vec![(0.0, 0.0), (10.0, -2.0), (15.0, 3.0)],
+            boundary_condition: BoundaryCondition::Natural,
+        })
+        .with_fixed_temp(10.0, -2.0)
+        .build()
+        .expect("should build correctly");
+    }
+
+    #[test]
+    fn should_build_correctly_with_spline_and_linear() {
+        let _ = TemperatureProfileBuilder::new(FunctionDef::Spline {
+            points: vec![(0.0, 0.0), (10.0, -2.0), (15.0, 3.0)],
+            boundary_condition: BoundaryCondition::Natural,
+        })
+        .with_next_function(16.0, FunctionDef::Linear { gradient: 3.0 })
+        .build()
+        .expect("should build correctly");
+    }
+
+    #[test]
+    fn should_build_correctly_with_linear_and_spline() {
+        let _ = TemperatureProfileBuilder::new(FunctionDef::Linear { gradient: 3.0 })
+            .with_next_function(
+                -1.0,
+                FunctionDef::Spline {
+                    points: vec![(0.0, 0.0), (10.0, -2.0), (15.0, 3.0)],
+                    boundary_condition: BoundaryCondition::Natural,
+                },
+            )
+            .build()
+            .expect("should build correctly");
+    }
+
+    #[test]
+    fn should_fail_if_linear_without_fixed_temp() {
+        let result = TemperatureProfileBuilder::new(FunctionDef::Linear { gradient: 3.1 })
+            .with_next_function(0.0, FunctionDef::Linear { gradient: 3.0 })
+            .build();
+        assert_eq!(result, Err(TemperatureProfileError::NoFixedPoint));
+    }
+
+    #[test]
+    fn should_fail_if_conflict() {
+        let result = TemperatureProfileBuilder::new(FunctionDef::Linear { gradient: 3.0 })
+            .with_next_function(
+                0.0,
+                FunctionDef::Spline {
+                    points: vec![(0.0, 0.0), (10.0, -2.0), (15.0, 3.0)],
+                    boundary_condition: BoundaryCondition::Natural,
+                },
+            )
+            .with_fixed_temp(-2.0, 0.0)
+            .build();
+        assert_eq!(
+            result,
+            Err(TemperatureProfileError::FixedPointConflict {
+                index1: 0,
+                index2: 1,
+                point1: (-2.0, 0.0),
+                point2: (0.0, 0.0),
+                gradient: Some(3.0),
+            })
+        );
+    }
 }
