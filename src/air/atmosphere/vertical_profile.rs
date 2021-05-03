@@ -1,7 +1,7 @@
 use cubic_splines::{BoundaryCondition, CubicPoly, Spline};
 
 #[derive(Clone, Debug, PartialEq)]
-enum TemperatureFunction {
+enum VerticalFunction {
     /// T(h) = a*h + b
     Linear {
         a: f64,
@@ -11,9 +11,9 @@ enum TemperatureFunction {
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct TemperatureProfile {
+pub struct VerticalProfile {
     altitude_interval_ends: Vec<f64>,
-    interval_functions: Vec<TemperatureFunction>,
+    interval_functions: Vec<VerticalFunction>,
 }
 
 #[derive(Clone, Debug)]
@@ -117,30 +117,30 @@ impl IntermediateFunctionDef {
         }
     }
 
-    fn into_function(self) -> TemperatureFunction {
+    fn into_function(self) -> VerticalFunction {
         match self {
             IntermediateFunctionDef::Linear {
                 gradient,
                 fixed_point,
             } => {
                 let (x, y) = fixed_point.expect("should have a fixed point now");
-                TemperatureFunction::Linear {
+                VerticalFunction::Linear {
                     a: gradient,
                     b: y - gradient * x,
                 }
             }
-            IntermediateFunctionDef::Cubic { poly } => TemperatureFunction::Cubic(poly),
+            IntermediateFunctionDef::Cubic { poly } => VerticalFunction::Cubic(poly),
         }
     }
 }
 
 #[derive(Clone, Debug)]
-pub struct TemperatureProfileBuilder {
+pub struct VerticalProfileBuilder {
     interval_ends: Vec<f64>,
     function_defs: Vec<FunctionDef>,
-    // value of temperature at a specific altitude - required if all the functions in the
+    // value at a specific altitude - required if all the functions in the
     // definition are gradients
-    fixed_temp: Option<(f64, f64)>,
+    fixed_value: Option<(f64, f64)>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -150,12 +150,12 @@ pub enum FixedPoint {
     FixedTemp,
 }
 
-impl TemperatureProfileBuilder {
+impl VerticalProfileBuilder {
     pub fn new(first_fun: FunctionDef) -> Self {
         Self {
             interval_ends: vec![],
             function_defs: vec![first_fun],
-            fixed_temp: None,
+            fixed_value: None,
         }
     }
 
@@ -165,21 +165,21 @@ impl TemperatureProfileBuilder {
         self
     }
 
-    pub fn with_fixed_temp(mut self, altitude: f64, temp: f64) -> Self {
-        self.fixed_temp = Some((altitude, temp));
+    pub fn with_fixed_value(mut self, altitude: f64, val: f64) -> Self {
+        self.fixed_value = Some((altitude, val));
         self
     }
 
-    pub fn build(self) -> Result<TemperatureProfile, TemperatureProfileError> {
+    pub fn build(self) -> Result<VerticalProfile, VerticalProfileError> {
         let Self {
             interval_ends,
             function_defs,
-            fixed_temp,
+            fixed_value,
         } = self;
         let (interval_ends, mut intermediate_function_defs) =
             Self::generate_intermediate_function_defs(interval_ends, function_defs);
-        Self::fill_fixed_points(&interval_ends, &mut intermediate_function_defs, fixed_temp)?;
-        Ok(TemperatureProfile {
+        Self::fill_fixed_points(&interval_ends, &mut intermediate_function_defs, fixed_value)?;
+        Ok(VerticalProfile {
             altitude_interval_ends: interval_ends,
             interval_functions: intermediate_function_defs
                 .into_iter()
@@ -212,10 +212,10 @@ impl TemperatureProfileBuilder {
     fn fill_fixed_points(
         interval_ends: &[f64],
         function_defs: &mut [IntermediateFunctionDef],
-        fixed_temp: Option<(f64, f64)>,
-    ) -> Result<(), TemperatureProfileError> {
+        fixed_value: Option<(f64, f64)>,
+    ) -> Result<(), VerticalProfileError> {
         for index in 0..function_defs.len() {
-            Self::fill_fixed_point(interval_ends, function_defs, index, fixed_temp)?;
+            Self::fill_fixed_point(interval_ends, function_defs, index, fixed_value)?;
         }
         Ok(())
     }
@@ -224,8 +224,8 @@ impl TemperatureProfileBuilder {
         interval_ends: &[f64],
         function_defs: &mut [IntermediateFunctionDef],
         index: usize,
-        fixed_temp: Option<(f64, f64)>,
-    ) -> Result<(), TemperatureProfileError> {
+        fixed_value: Option<(f64, f64)>,
+    ) -> Result<(), VerticalProfileError> {
         const EPSILON: f64 = 1e-4;
 
         let has_fixed_point_below = index.checked_sub(1).map_or(false, |index_below| {
@@ -234,26 +234,26 @@ impl TemperatureProfileBuilder {
         let has_fixed_point_above =
             (index + 1 < function_defs.len()) && function_defs[index + 1].has_fixed_point();
 
-        // if there was a fixed_temp specified and it's in our interval, set it as our
+        // if there was a fixed_value specified and it's in our interval, set it as our
         // fixed point
         if let (Some((x, _)), IntermediateFunctionDef::Linear { fixed_point, .. }) =
-            (fixed_temp, &mut function_defs[index])
+            (fixed_value, &mut function_defs[index])
         {
             if index
                 .checked_sub(1)
                 .map_or(true, |ib| interval_ends[ib] <= x)
                 && (index >= interval_ends.len() || interval_ends[index] >= x)
             {
-                *fixed_point = fixed_temp;
+                *fixed_point = fixed_value;
             }
         }
 
         let has_fixed_point = function_defs[index].has_fixed_point();
         if !has_fixed_point_below && !has_fixed_point_above && !has_fixed_point {
             if index + 1 < function_defs.len() {
-                Self::fill_fixed_point(interval_ends, function_defs, index + 1, fixed_temp)?;
+                Self::fill_fixed_point(interval_ends, function_defs, index + 1, fixed_value)?;
             } else {
-                return Err(TemperatureProfileError::NoFixedPoint);
+                return Err(VerticalProfileError::NoFixedPoint);
             }
         }
 
@@ -276,7 +276,7 @@ impl TemperatureProfileBuilder {
                 // check the consistency of the previous function's fixed point and ours
                 if let (Some((x1, y1)), Some((x2, y2))) = (point_below, *fixed_point) {
                     if ((y2 - y1) - *gradient * (x2 - x1)).abs() > EPSILON {
-                        return Err(TemperatureProfileError::FixedPointConflict {
+                        return Err(VerticalProfileError::FixedPointConflict {
                             index1: index - 1,
                             index2: index,
                             point1: (x1, y1),
@@ -288,7 +288,7 @@ impl TemperatureProfileBuilder {
                 // check the consistency of the next function's fixed point and ours
                 if let (Some((x1, y1)), Some((x2, y2))) = (*fixed_point, point_above) {
                     if ((y2 - y1) - *gradient * (x2 - x1)).abs() > EPSILON {
-                        return Err(TemperatureProfileError::FixedPointConflict {
+                        return Err(VerticalProfileError::FixedPointConflict {
                             index1: index,
                             index2: index + 1,
                             point1: (x1, y1),
@@ -305,22 +305,22 @@ impl TemperatureProfileBuilder {
                         *fixed_point = Some(point);
                         Ok(())
                     } else {
-                        Err(TemperatureProfileError::NoFixedPoint)
+                        Err(VerticalProfileError::NoFixedPoint)
                     }
                 } else {
                     Ok(())
                 }
             }
             IntermediateFunctionDef::Cubic { poly } => {
-                // if the fixed temp is in our interval, check its consistency with the polynomial
-                if let Some((x, y)) = fixed_temp {
+                // if the fixed value is in our interval, check its consistency with the polynomial
+                if let Some((x, y)) = fixed_value {
                     if index
                         .checked_sub(1)
                         .map_or(true, |ib| interval_ends[ib] <= x)
                         && (index >= interval_ends.len() || interval_ends[index] >= x)
                         && (y - poly.eval(x)).abs() > EPSILON
                     {
-                        return Err(TemperatureProfileError::FixedPointConflict {
+                        return Err(VerticalProfileError::FixedPointConflict {
                             index1: index,
                             index2: index,
                             point1: (x, y),
@@ -332,7 +332,7 @@ impl TemperatureProfileBuilder {
                 // check the consistency of the previous function's fixed point and ours
                 if let Some((x, y)) = point_below {
                     if (y - poly.eval(x)).abs() > EPSILON {
-                        return Err(TemperatureProfileError::FixedPointConflict {
+                        return Err(VerticalProfileError::FixedPointConflict {
                             index1: index - 1,
                             index2: index,
                             point1: (x, y),
@@ -344,7 +344,7 @@ impl TemperatureProfileBuilder {
                 // check the consistency of the next function's fixed point and ours
                 if let Some((x, y)) = point_above {
                     if (y - poly.eval(x)).abs() > EPSILON {
-                        return Err(TemperatureProfileError::FixedPointConflict {
+                        return Err(VerticalProfileError::FixedPointConflict {
                             index1: index,
                             index2: index + 1,
                             point1: (x, poly.eval(x)),
@@ -360,7 +360,7 @@ impl TemperatureProfileBuilder {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum TemperatureProfileError {
+pub enum VerticalProfileError {
     NoFixedPoint,
     FixedPointConflict {
         index1: usize,
@@ -377,37 +377,37 @@ mod test {
 
     #[test]
     fn should_build_correctly_with_fixed_point_in_first_interval() {
-        let _ = TemperatureProfileBuilder::new(FunctionDef::Linear { gradient: -0.0065 })
+        let _ = VerticalProfileBuilder::new(FunctionDef::Linear { gradient: -0.0065 })
             .with_next_function(11e3, FunctionDef::Linear { gradient: 0.0 })
             .with_next_function(15e3, FunctionDef::Linear { gradient: 0.0065 })
-            .with_fixed_temp(0.0, 288.0)
+            .with_fixed_value(0.0, 288.0)
             .build()
             .expect("should build correctly");
     }
 
     #[test]
     fn should_build_correctly_with_fixed_point_in_last_interval() {
-        let _ = TemperatureProfileBuilder::new(FunctionDef::Linear { gradient: -0.0065 })
+        let _ = VerticalProfileBuilder::new(FunctionDef::Linear { gradient: -0.0065 })
             .with_next_function(11e3, FunctionDef::Linear { gradient: 0.0 })
             .with_next_function(15e3, FunctionDef::Linear { gradient: 0.0065 })
-            .with_fixed_temp(16e3, 218.0)
+            .with_fixed_value(16e3, 218.0)
             .build()
             .expect("should build correctly");
     }
 
     #[test]
     fn should_build_correctly_with_fixed_point_in_the_middle() {
-        let _ = TemperatureProfileBuilder::new(FunctionDef::Linear { gradient: -0.0065 })
+        let _ = VerticalProfileBuilder::new(FunctionDef::Linear { gradient: -0.0065 })
             .with_next_function(11e3, FunctionDef::Linear { gradient: 0.0 })
             .with_next_function(15e3, FunctionDef::Linear { gradient: 0.0065 })
-            .with_fixed_temp(12e3, 218.0)
+            .with_fixed_value(12e3, 218.0)
             .build()
             .expect("should build correctly");
     }
 
     #[test]
     fn should_build_correctly_with_only_spline() {
-        let _ = TemperatureProfileBuilder::new(FunctionDef::Spline {
+        let _ = VerticalProfileBuilder::new(FunctionDef::Spline {
             points: vec![(0.0, 0.0), (10.0, -2.0), (15.0, 3.0)],
             boundary_condition: BoundaryCondition::Natural,
         })
@@ -417,18 +417,18 @@ mod test {
 
     #[test]
     fn should_build_correctly_with_spline_with_fixed_point() {
-        let _ = TemperatureProfileBuilder::new(FunctionDef::Spline {
+        let _ = VerticalProfileBuilder::new(FunctionDef::Spline {
             points: vec![(0.0, 0.0), (10.0, -2.0), (15.0, 3.0)],
             boundary_condition: BoundaryCondition::Natural,
         })
-        .with_fixed_temp(10.0, -2.0)
+        .with_fixed_value(10.0, -2.0)
         .build()
         .expect("should build correctly");
     }
 
     #[test]
     fn should_build_correctly_with_spline_and_linear() {
-        let _ = TemperatureProfileBuilder::new(FunctionDef::Spline {
+        let _ = VerticalProfileBuilder::new(FunctionDef::Spline {
             points: vec![(0.0, 0.0), (10.0, -2.0), (15.0, 3.0)],
             boundary_condition: BoundaryCondition::Natural,
         })
@@ -439,7 +439,7 @@ mod test {
 
     #[test]
     fn should_build_correctly_with_linear_and_spline() {
-        let _ = TemperatureProfileBuilder::new(FunctionDef::Linear { gradient: 3.0 })
+        let _ = VerticalProfileBuilder::new(FunctionDef::Linear { gradient: 3.0 })
             .with_next_function(
                 -1.0,
                 FunctionDef::Spline {
@@ -452,16 +452,16 @@ mod test {
     }
 
     #[test]
-    fn should_fail_if_linear_without_fixed_temp() {
-        let result = TemperatureProfileBuilder::new(FunctionDef::Linear { gradient: 3.1 })
+    fn should_fail_if_linear_without_fixed_value() {
+        let result = VerticalProfileBuilder::new(FunctionDef::Linear { gradient: 3.1 })
             .with_next_function(0.0, FunctionDef::Linear { gradient: 3.0 })
             .build();
-        assert_eq!(result, Err(TemperatureProfileError::NoFixedPoint));
+        assert_eq!(result, Err(VerticalProfileError::NoFixedPoint));
     }
 
     #[test]
     fn should_fail_if_conflict() {
-        let result = TemperatureProfileBuilder::new(FunctionDef::Linear { gradient: 3.0 })
+        let result = VerticalProfileBuilder::new(FunctionDef::Linear { gradient: 3.0 })
             .with_next_function(
                 0.0,
                 FunctionDef::Spline {
@@ -469,11 +469,11 @@ mod test {
                     boundary_condition: BoundaryCondition::Natural,
                 },
             )
-            .with_fixed_temp(-2.0, 0.0)
+            .with_fixed_value(-2.0, 0.0)
             .build();
         assert_eq!(
             result,
-            Err(TemperatureProfileError::FixedPointConflict {
+            Err(VerticalProfileError::FixedPointConflict {
                 index1: 0,
                 index2: 1,
                 point1: (-2.0, 0.0),

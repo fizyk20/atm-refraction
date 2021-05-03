@@ -1,5 +1,5 @@
 pub mod parser;
-pub mod temperature_profile;
+pub mod vertical_profile;
 
 use self::parser::{parse_atmosphere, AtmosphereDef, LapseDef, PressureDef, TemperatureAt};
 use std::cmp::Ordering;

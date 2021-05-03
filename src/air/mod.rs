@@ -8,7 +8,7 @@ mod refractive;
 mod vapor;
 
 pub use self::atmosphere::{
-    atm_from_str, get_atmosphere, temperature_profile, us76_atmosphere, Atmosphere,
+    atm_from_str, get_atmosphere, us76_atmosphere, vertical_profile, Atmosphere,
 };
 pub use self::refractive::{air_index, d_air_index};
 pub use self::vapor::{dp_sv, p_sv};
