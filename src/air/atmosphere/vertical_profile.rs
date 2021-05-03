@@ -3,6 +3,7 @@ use cubic_splines::{BoundaryCondition, CubicPoly, Spline};
 use serde_derive::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub enum VerticalFunction {
     /// T(h) = a*h + b
     Linear {
@@ -29,6 +30,7 @@ impl VerticalFunction {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub struct VerticalProfile {
     altitude_interval_ends: Vec<f64>,
     interval_functions: Vec<VerticalFunction>,

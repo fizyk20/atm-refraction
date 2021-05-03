@@ -8,6 +8,7 @@ use super::{
 use cubic_splines::Factors;
 
 #[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub enum PressureFunction {
     /// p0 * exp(lambda * (h-h0))
     Exponential { p0: f64, h0: f64, lambda: f64 },
@@ -133,6 +134,7 @@ impl PressureFunction {
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub struct PressureProfile {
     altitude_interval_ends: Vec<f64>,
     pressure_functions: Vec<PressureFunction>,
