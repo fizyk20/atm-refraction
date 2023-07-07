@@ -6,6 +6,9 @@ use self::{
     vertical_profile::{FunctionDef, VerticalProfile, VerticalProfileBuilder},
 };
 
+#[cfg(feature = "serialization")]
+use cubic_splines::BoundaryCondition;
+
 /// mu*g/R
 pub const A: f64 = 0.03416320331088684;
 
@@ -30,14 +33,31 @@ pub struct TemperatureFixedPoint {
     temperature: f64,
 }
 
+#[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
+pub struct HumidityFixedPoint {
+    altitude: f64,
+    humidity: f64,
+}
+
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub struct AtmosphereDef {
     #[cfg_attr(feature = "serialization", serde(default = "default_pressure"))]
     pressure: PressureFixedPoint,
     first_temperature_function: FunctionDef,
+    #[cfg_attr(feature = "serialization", serde(default))]
     next_functions: Vec<FunctionDefWithAlt>,
     temperature_fixed_point: Option<TemperatureFixedPoint>,
+
+    #[cfg_attr(
+        feature = "serialization",
+        serde(default = "default_first_humidity_function")
+    )]
+    first_humidity_function: FunctionDef,
+    #[cfg_attr(feature = "serialization", serde(default))]
+    next_humidity_functions: Vec<FunctionDefWithAlt>,
+    humidity_fixed_point: Option<HumidityFixedPoint>,
 }
 
 impl AtmosphereDef {
@@ -82,6 +102,12 @@ impl AtmosphereDef {
                 altitude: 0.0,
                 temperature: 288.0,
             }),
+            first_humidity_function: FunctionDef::Linear { gradient: 0.0 },
+            next_humidity_functions: vec![],
+            humidity_fixed_point: Some(HumidityFixedPoint {
+                altitude: 0.0,
+                humidity: 0.0,
+            }),
         }
     }
 }
@@ -94,6 +120,14 @@ fn default_pressure() -> PressureFixedPoint {
     }
 }
 
+#[cfg(feature = "serialization")]
+fn default_first_humidity_function() -> FunctionDef {
+    FunctionDef::Spline {
+        points: vec![(0.0, 0.0), (1.0, 0.0), (2.0, 0.0)],
+        boundary_condition: BoundaryCondition::Natural,
+    }
+}
+
 /// A structure representing an atmospheric model. It provides the temperature and density as
 /// functions of altitude
 #[derive(Debug, Clone)]
@@ -101,6 +135,7 @@ fn default_pressure() -> PressureFixedPoint {
 pub struct Atmosphere {
     pressure: PressureProfile,
     temperature: VerticalProfile,
+    humidity: VerticalProfile,
 }
 
 impl Atmosphere {
@@ -115,6 +150,15 @@ impl Atmosphere {
         }
         let temperature = builder.build().unwrap();
 
+        let mut builder = VerticalProfileBuilder::new(def.first_humidity_function);
+        if let Some(point) = def.humidity_fixed_point {
+            builder = builder.with_fixed_value(point.altitude, point.humidity);
+        }
+        for fun_def in def.next_humidity_functions {
+            builder = builder.with_next_function(fun_def.altitude, fun_def.function);
+        }
+        let humidity = builder.build().unwrap();
+
         let pressure = PressureProfile::from_temperature_profile(
             &temperature,
             def.pressure.pressure,
@@ -124,6 +168,7 @@ impl Atmosphere {
         Atmosphere {
             pressure,
             temperature,
+            humidity,
         }
     }
 
@@ -147,6 +192,16 @@ impl Atmosphere {
         let p = self.pressure(h);
         let t = self.temperature(h);
         -A * p / t
+    }
+
+    /// Returns the temperature at the given altitude
+    pub fn humidity(&self, h: f64) -> f64 {
+        self.humidity.eval(h)
+    }
+
+    /// Returns the derivative of temperature with respect to altitude at the given altitude
+    pub fn dhumidity(&self, h: f64) -> f64 {
+        self.humidity.eval_derivative(h)
     }
 }
 
@@ -190,6 +245,7 @@ mod test {
             },
             next_functions: vec![],
             temperature_fixed_point: None,
+            ..AtmosphereDef::us_76()
         };
         let atmosphere = Atmosphere::from_def(atmosphere_def);
         for i in 0..600 {

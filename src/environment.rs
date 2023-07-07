@@ -22,7 +22,7 @@ impl Environment {
     pub fn n(&self, h: f64) -> f64 {
         let pressure = self.atmosphere.pressure(h);
         let temperature = self.atmosphere.temperature(h);
-        let rh = 0.0;
+        let rh = self.atmosphere.humidity(h);
         air_index(530e-9, pressure, temperature, rh)
     }
 
@@ -31,10 +31,10 @@ impl Environment {
     pub fn dn(&self, h: f64) -> f64 {
         let pressure = self.atmosphere.pressure(h);
         let temperature = self.atmosphere.temperature(h);
-        let rh = 0.0;
+        let rh = self.atmosphere.humidity(h);
         let dp = self.atmosphere.dpressure(h);
         let dt = self.atmosphere.dtemperature(h);
-        let drh = 0.0;
+        let drh = self.atmosphere.dhumidity(h);
         d_air_index(530e-9, pressure, temperature, rh, dp, dt, drh)
     }
 
