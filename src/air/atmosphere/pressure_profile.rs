@@ -165,7 +165,7 @@ impl PressureProfile {
             }
         }
         if let Some(start_index_above) =
-            (start_index < altitude_interval_ends.len()).then(|| start_index + 1)
+            (start_index < altitude_interval_ends.len()).then_some(start_index + 1)
         {
             for index in start_index_above..interval_functions.len() {
                 let h0 = altitude_interval_ends[index - 1];
@@ -177,7 +177,7 @@ impl PressureProfile {
             }
         }
 
-        let pressure_functions = map.into_iter().map(|(_, fun)| fun).collect();
+        let pressure_functions = map.into_values().collect();
 
         PressureProfile {
             altitude_interval_ends: altitude_interval_ends.clone(),

@@ -257,13 +257,13 @@ impl VerticalProfileBuilder {
         let mut new_function_defs = vec![];
         let first_function_def = function_defs.remove(0);
         let (alts, funs) =
-            first_function_def.into_intermediate(None, interval_ends.get(0).cloned());
+            first_function_def.into_intermediate(None, interval_ends.first().cloned());
         new_interval_ends.extend(alts);
         new_function_defs.extend(funs);
         while !interval_ends.is_empty() {
             let start = interval_ends.remove(0);
             let fun = function_defs.remove(0);
-            let (alts, funs) = fun.into_intermediate(Some(start), interval_ends.get(0).cloned());
+            let (alts, funs) = fun.into_intermediate(Some(start), interval_ends.first().cloned());
             new_interval_ends.extend(alts);
             new_function_defs.extend(funs);
         }

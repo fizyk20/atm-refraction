@@ -45,7 +45,7 @@ impl LineStepper {
         Self { x: 0.0, line, step }
     }
 
-    fn into_state(&self) -> RayState {
+    fn as_state(&self) -> RayState {
         let h = self.line.h_at_dist(self.x);
         RayState {
             x: self.x,
@@ -60,7 +60,7 @@ impl Iterator for LineStepper {
 
     fn next(&mut self) -> Option<RayState> {
         self.x += self.step;
-        Some(self.into_state())
+        Some(self.as_state())
     }
 }
 
@@ -120,7 +120,7 @@ impl<'a, 'b: 'a> Path<'a> for Ray<'b> {
 
     fn angle_at_dist(&self, dist: f64) -> f64 {
         let state = self.state_at_dist(dist);
-        state.get_angle(&self.env)
+        state.get_angle(self.env)
     }
 
     fn into_path_stepper(self) -> Box<dyn PathStepper<Item = RayState> + 'a> {
