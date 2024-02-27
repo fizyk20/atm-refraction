@@ -15,6 +15,13 @@ pub enum EarthShape {
 pub struct Environment {
     pub shape: EarthShape,
     pub atmosphere: Atmosphere,
+    #[cfg_attr(feature = "serialization", serde(default = "default_wavelength"))]
+    pub wavelength: f64,
+}
+
+#[cfg(feature = "serialization")]
+fn default_wavelength() -> f64 {
+    530e-9
 }
 
 impl Environment {
@@ -23,7 +30,7 @@ impl Environment {
         let pressure = self.atmosphere.pressure(h);
         let temperature = self.atmosphere.temperature(h);
         let rh = self.atmosphere.humidity(h);
-        air_index(530e-9, pressure, temperature, rh)
+        air_index(self.wavelength, pressure, temperature, rh)
     }
 
     /// Returns the derivative of the refractive index of the air with respect to the altitude, at
@@ -35,7 +42,7 @@ impl Environment {
         let dp = self.atmosphere.dpressure(h);
         let dt = self.atmosphere.dtemperature(h);
         let drh = self.atmosphere.dhumidity(h);
-        d_air_index(530e-9, pressure, temperature, rh, dp, dt, drh)
+        d_air_index(self.wavelength, pressure, temperature, rh, dp, dt, drh)
     }
 
     /// Returns Some(radius in meters) if the planet model is spherical, or None if it's flat.
