@@ -99,14 +99,21 @@ impl Ray<'_> {
             },
         };
 
-        let mut integrator = RK4Integrator::new(5.0);
-        while state.x < tgt_x {
+        let def_step = 5.0;
+        let mut integrator = RK4Integrator::new(def_step);
+        while state.x < tgt_x - def_step {
             integrator.propagate_in_place(
                 &mut state,
                 |state| self.env.calc_derivative_flat(state),
                 StepSize::UseDefault,
             );
         }
+        let last_step = tgt_x - state.x;
+        integrator.propagate_in_place(
+            &mut state,
+            |state| self.env.calc_derivative_flat(state),
+            StepSize::Step(last_step),
+        );
 
         state
     }
